@@ -30,13 +30,33 @@ async function getDatabaseData(searchParams: Record<string, string>): Promise<Da
   
   const stats = await Job.aggregate([
     {
+      $addFields: {
+        isProperlyProcessed: {
+          $and: [
+            { $eq: ['$processed', true] },
+            { $ne: ['$aiAnalysis', null] },
+            { $ne: ['$aiAnalysis.summary', 'Job analysis failed'] },
+            { $not: { $regexMatch: { input: '$aiAnalysis.summary', regex: 'Analysis unavailable' } } }
+          ]
+        }
+      }
+    },
+    {
       $group: {
         _id: null,
         total: { $sum: 1 },
-        processed: { $sum: { $cond: ['$processed', 1, 0] } },
-        unprocessed: { $sum: { $cond: ['$processed', 0, 1] } },
+        processed: { $sum: { $cond: ['$isProperlyProcessed', 1, 0] } },
+        unprocessed: { $sum: { $cond: ['$isProperlyProcessed', 0, 1] } },
         sources: { $addToSet: '$source' },
-        avgScore: { $avg: '$aiAnalysis.score' }
+        avgScore: { 
+          $avg: { 
+            $cond: [
+              { $and: ['$isProperlyProcessed', { $ne: ['$aiAnalysis.score', null] }] },
+              '$aiAnalysis.score',
+              null
+            ]
+          }
+        }
       }
     }
   ]);
@@ -66,7 +86,7 @@ async function getDatabaseData(searchParams: Record<string, string>): Promise<Da
 export default async function DatabaseViewer({
   searchParams
 }: {
-  searchParams: Record<string, string>;
+  searchParams: Promise<Record<string, string>>;
 }) {
   if (process.env.NODE_ENV === 'production') {
     return (
@@ -81,7 +101,8 @@ export default async function DatabaseViewer({
 
   let data: DatabaseData;
   try {
-    data = await getDatabaseData(searchParams);
+    const resolvedSearchParams = await searchParams;
+    data = await getDatabaseData(resolvedSearchParams);
   } catch (error) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
