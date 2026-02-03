@@ -1,5 +1,6 @@
 import { IJob } from '@/schemas/Job';
 import { API_THROTTLER } from '@/lib/utils/throttlers';
+import { stripHtmlTags } from '@/lib/utils/textUtils';
 import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@/types';
 import { BROWSER_CONFIG, JOB_SOURCES } from '@/constants';
 
@@ -85,13 +86,12 @@ export async function scrapeStartupJobs(
         };
         
         const jobs = responseData.map((job: StartupJobsOffer) => {
-          const cleanDescription = job.description.cs
-            .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
-            .replace(/<script[^>]*>.*?<\/script>/gi, '')
-            .replace(/<style[^>]*>.*?<\/style>/gi, '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+          const cleanDescription = stripHtmlTags(
+            job.description.cs
+              .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+              .replace(/<script[^>]*>.*?<\/script>/gi, '')
+              .replace(/<style[^>]*>.*?<\/style>/gi, '')
+          );
           
           const slug = generateSlug(job.title.cs);
           const generatedUrl = `https://www.startupjobs.cz/nabidka/${job.displayId}/${slug}`;

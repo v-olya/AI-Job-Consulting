@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { Page } from 'playwright';
 import { IJob } from '@/schemas/Job';
 import { SCRAPING_THROTTLER, DETAIL_THROTTLER } from '@/lib/utils/throttlers';
+import { stripHtmlAndPreserveSpaces } from '@/lib/utils/textUtils';
 import { JobsCzConfig } from '@/types';
 import { 
   BROWSER_CONFIG, 
@@ -10,20 +11,6 @@ import {
   JOB_SOURCES, 
   DEFAULT_LOCATION 
 } from '@/constants';
-
-function stripHtmlAndPreserveSpaces(html: string): string {
-  const $ = cheerio.load(html);
-  
-  $('script, style, iframe, noscript').remove();
-  
-  $('p, div, br, li, h1, h2, h3, h4, h5, h6').each((_, elem) => {
-    $(elem).append(' ');
-  });
-  
-  return $('body').text()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export async function scrapeJobsCz(
   config: JobsCzConfig,
