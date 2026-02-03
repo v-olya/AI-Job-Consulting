@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { DatabaseData } from '@/types';
+import { JobCard } from '@/components/JobCard';
+import { StatCard } from '@/components/StatCard';
+import { PaginationButton } from '@/components/buttons/PaginationButton';
 
 interface DatabaseClientProps {
   initialData: DatabaseData;
@@ -12,7 +15,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingResult, setProcessingResult] = useState<string | null>(null);
+  const [processingResult, setProcessingResult] = useState<string>();
   
   const currentSource = searchParams.get('source') || '';
   const currentProcessed = searchParams.get('processed') || '';
@@ -39,7 +42,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
 
   const handleProcessWithAI = async () => {
     setIsProcessing(true);
-    setProcessingResult(null);
+    setProcessingResult(undefined);
     
     try {
       const response = await fetch('/api/process-ai', {
@@ -65,168 +68,117 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
     }
   };
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Database Viewer</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-100 p-4 rounded-lg">
-          <h3 className="font-semibold">Total Jobs</h3>
-          <p className="text-2xl">{initialData.statistics.total || 0}</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="p-8 max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">
+          Database Viewer
+        </h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Total Jobs" value={initialData.statistics.total || 0} bgColor="bg-blue-100" />
+          <StatCard title="Processed" value={initialData.statistics.processed || 0} bgColor="bg-green-100" />
+          <StatCard title="Unprocessed" value={initialData.statistics.unprocessed || 0} bgColor="bg-orange-100" />
+          <StatCard 
+            title="Avg AI Score" 
+            value={initialData.statistics.avgScore?.toFixed(1) || 'N/A'} 
+            bgColor="bg-purple-100" 
+          />
         </div>
-        <div className="bg-green-100 p-4 rounded-lg">
-          <h3 className="font-semibold">Processed</h3>
-          <p className="text-2xl">{initialData.statistics.processed || 0}</p>
-        </div>
-        <div className="bg-yellow-100 p-4 rounded-lg">
-          <h3 className="font-semibold">Unprocessed</h3>
-          <p className="text-2xl">{initialData.statistics.unprocessed || 0}</p>
-        </div>
-        <div className="bg-purple-100 p-4 rounded-lg">
-          <h3 className="font-semibold">Avg AI Score</h3>
-          <p className="text-2xl">{initialData.statistics.avgScore?.toFixed(1) || 'N/A'}</p>
-        </div>
-      </div>
 
-      <div className="mb-6">
-        <h3 className="font-semibold mb-2">Sources:</h3>
-        <div className="flex gap-4">
-          {initialData.sourceBreakdown.map(source => (
-            <span key={source._id} className="bg-gray-100 px-3 py-1 rounded">
-              {source._id}: {source.count}
-            </span>
+        <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+          <h3 className="font-semibold mb-3 text-gray-700">Sources:</h3>
+          <div className="flex gap-3 flex-wrap">
+            {initialData.sourceBreakdown.map(source => (
+              <span key={source._id} className="bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 rounded-full text-sm font-medium">
+                {source._id}: <span className="font-bold">{source.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {initialData.statistics.unprocessed > 0 && (
+          <div className="mb-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-xl shadow-sm">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
+                  <span>⚠️</span>
+                  {initialData.statistics.unprocessed} jobs need AI processing
+                </h3>
+                <p className="text-yellow-800 text-sm mt-1">
+                  Run AI analysis on unprocessed jobs to get summaries, skills, and scores
+                </p>
+              </div>
+              <button
+                onClick={handleProcessWithAI}
+                disabled={isProcessing}
+                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-bold text-lg"
+              >
+                {isProcessing ? '⏳ Processing...' : '🤖 Process with AI'}
+              </button>
+            </div>
+            {processingResult && (
+              <div className="mt-4 p-3 bg-white rounded-lg border border-yellow-200 shadow-sm">
+                <p className="text-sm text-gray-700">{processingResult}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-4 mb-8 flex-wrap">
+          <select 
+            value={currentSource} 
+            onChange={(e) => updateFilters({ source: e.target.value })}
+            className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          >
+            <option value="">All Sources</option>
+            <option value="startupjobs">StartupJobs</option>
+            <option value="jobs.cz">Jobs.cz</option>
+          </select>
+          
+          <select 
+            value={currentProcessed} 
+            onChange={(e) => updateFilters({ processed: e.target.value })}
+            className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          >
+            <option value="">All Status</option>
+            <option value="true">Processed</option>
+            <option value="false">Unprocessed</option>
+          </select>
+          
+          <select 
+            value={currentLimit} 
+            onChange={(e) => updateFilters({ limit: parseInt(e.target.value) })}
+            className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+          >
+            <option value={10}>10 per page</option>
+            <option value={25}>25 per page</option>
+            <option value={50}>50 per page</option>
+          </select>
+        </div>
+
+        <div className="flex gap-3 mb-8 items-center">
+          <PaginationButton 
+            onClick={() => updateFilters({ skip: Math.max(0, currentSkip - currentLimit) })}
+            disabled={currentSkip === 0}
+          >
+            ← Previous
+          </PaginationButton>
+          <span className="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 font-bold text-gray-700">
+            Showing {currentSkip + 1}-{Math.min(currentSkip + currentLimit, initialData.pagination.total)} of {initialData.pagination.total}
+          </span>
+          <PaginationButton 
+            onClick={() => updateFilters({ skip: currentSkip + currentLimit })}
+            disabled={!initialData.pagination.hasMore}
+          >
+            Next →
+          </PaginationButton>
+        </div>
+
+        <div className="space-y-4">
+          {initialData.jobs.map(job => (
+            <JobCard key={job._id} job={job} />
           ))}
         </div>
-      </div>
-
-      {initialData.statistics.unprocessed > 0 && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="font-semibold text-yellow-800">
-                {initialData.statistics.unprocessed} jobs need AI processing
-              </h3>
-              <p className="text-yellow-700 text-sm">
-                Run AI analysis on unprocessed jobs to get summaries, skills, and scores
-              </p>
-            </div>
-            <button
-              onClick={handleProcessWithAI}
-              disabled={isProcessing}
-              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? 'Processing...' : 'Process with AI'}
-            </button>
-          </div>
-          {processingResult && (
-            <div className="mt-3 p-2 bg-white rounded border">
-              <p className="text-sm">{processingResult}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex gap-4 mb-6 flex-wrap">
-        <select 
-          value={currentSource} 
-          onChange={(e) => updateFilters({ source: e.target.value })}
-          className="border rounded px-3 py-2"
-        >
-          <option value="">All Sources</option>
-          <option value="startupjobs">StartupJobs</option>
-          <option value="jobs.cz">Jobs.cz</option>
-        </select>
-        
-        <select 
-          value={currentProcessed} 
-          onChange={(e) => updateFilters({ processed: e.target.value })}
-          className="border rounded px-3 py-2"
-        >
-          <option value="">All Status</option>
-          <option value="true">Processed</option>
-          <option value="false">Unprocessed</option>
-        </select>
-        
-        <select 
-          value={currentLimit} 
-          onChange={(e) => updateFilters({ limit: parseInt(e.target.value) })}
-          className="border rounded px-3 py-2"
-        >
-          <option value={10}>10 per page</option>
-          <option value={25}>25 per page</option>
-          <option value={50}>50 per page</option>
-        </select>
-      </div>
-      <div className="flex gap-2 mb-6">
-        <button 
-          onClick={() => updateFilters({ skip: Math.max(0, currentSkip - currentLimit) })}
-          disabled={currentSkip === 0}
-          className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
-        >
-          Previous
-        </button>
-        <span className="px-4 py-2">
-          Showing {currentSkip + 1}-{Math.min(currentSkip + currentLimit, initialData.pagination.total)} of {initialData.pagination.total}
-        </span>
-        <button 
-          onClick={() => updateFilters({ skip: currentSkip + currentLimit })}
-          disabled={!initialData.pagination.hasMore}
-          className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
-        >
-          Next
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {initialData.jobs.map(job => (
-          <div key={job._id} className="border rounded-lg p-4 bg-white shadow">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-semibold">{job.title}</h3>
-              <div className="flex gap-2">
-                <span className={`px-2 py-1 rounded text-xs ${job.processed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                  {job.processed ? 'Processed' : 'Unprocessed'}
-                </span>
-                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                  {job.source}
-                </span>
-              </div>
-            </div>
-            
-            <p className="text-gray-600 mb-2">
-              {job.company}
-              {job.location && job.location !== 'Not detected' && ` • ${job.location}`}
-            </p>
-            
-            {job.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {job.tags.map((tag, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {job.aiAnalysis && (
-              <div className="mt-3 p-3 bg-gray-50 rounded">
-                <h4 className="font-semibold text-sm mb-1">AI Analysis</h4>
-                <p className="text-sm mb-2">{job.aiAnalysis.summary}</p>
-                <div className="flex gap-4 text-xs text-gray-600">
-                  <span>Seniority: {job.aiAnalysis.seniority}</span>
-                  <span>Remote: {job.aiAnalysis.remote ? 'Yes' : 'No'}</span>
-                  <span>Score: {job.aiAnalysis.score}/100</span>
-                </div>
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center mt-3 text-xs text-gray-500">
-              <span>Posted: {new Date(job.postedDate).toLocaleDateString('en-US')}</span>
-              <span>Scraped: {new Date(job.scrapedAt).toLocaleDateString('en-US')}</span>
-              <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                View Original
-              </a>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
