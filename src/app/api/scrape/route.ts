@@ -3,7 +3,8 @@ import { connectDB } from '@/lib/utils/database';
 import { Job, IJob } from '@/schemas/Job';
 import { scrapeStartupJobs } from '@/lib/scrapers/startupjobs';
 import { scrapeJobsCz } from '@/lib/scrapers/jobscz';
-import { analyzeJob, isOllamaAvailable } from '@/lib/ai/ollama';
+import { isOllamaAvailable } from '@/lib/ai/ollama';
+import { processJobWithAI } from '@/lib/ai/jobProcessing';
 import { getScrapingConfig } from '@/configureFilters';
 import { FE_ERROR_MESSAGES } from '@/constants';
 
@@ -28,29 +29,36 @@ async function processAndSaveJob(
       return;
     }
     
-    let aiAnalysis;
+    let processingResult;
+    
     if (ollamaAvailable && jobData.title && jobData.company && jobData.description && jobData.location) {
-      try {
-        aiAnalysis = await analyzeJob({
-          title: jobData.title,
-          company: jobData.company,
-          description: jobData.description,
-          location: jobData.location
-        });
-      } catch (aiError) {
-        console.warn(`${FE_ERROR_MESSAGES.AI_ANALYSIS_FAILED} ${jobData.title}:`, aiError instanceof Error ? aiError.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR);
-      }
+      processingResult = await processJobWithAI({
+        title: jobData.title,
+        company: jobData.company,
+        description: jobData.description,
+        location: jobData.location,
+        salary: jobData.salary
+      });
     }
     
-    const job = new Job({
+    const finalJobData = {
       ...jobData,
-      aiAnalysis,
-      processed: Boolean(aiAnalysis)
-    });
+      company: processingResult?.updatedCompanyName || jobData.company,
+      aiAnalysis: processingResult?.aiAnalysis,
+      companyResearch: processingResult?.companyResearch,
+      processed: Boolean(processingResult?.aiAnalysis)
+    };
     
+    const job = new Job(finalJobData);
     await job.save();
     savedJobs.push(job);
-    console.log(`Saved: ${jobData.title} ${aiAnalysis ? '(+AI)' : ''}`);
+    
+    const statusParts = [];
+    if (processingResult?.aiAnalysis) statusParts.push('+AI');
+    if (processingResult?.companyResearch) statusParts.push('+Research');
+    const status = statusParts.length ? ` (${statusParts.join(', ')})` : '';
+    
+    console.log(`Saved: ${jobData.title}${status}`);
   } catch (error) {
     console.error(`${FE_ERROR_MESSAGES.JOB_SAVE_FAILED} ${jobData.title}:`, error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR);
   }
