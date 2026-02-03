@@ -4,7 +4,10 @@ import { API_THROTTLER } from '@/lib/utils/throttlers';
 import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@/types';
 import { BROWSER_CONFIG, JOB_SOURCES } from '@/constants';
 
-export async function scrapeStartupJobs(config: StartupJobsConfig): Promise<Partial<IJob>[]> {
+export async function scrapeStartupJobs(
+  config: StartupJobsConfig,
+  onJobScraped?: (job: Partial<IJob>) => Promise<void>
+): Promise<Partial<IJob>[]> {
   const allJobs: Partial<IJob>[] = [];
   
   try {
@@ -18,24 +21,31 @@ export async function scrapeStartupJobs(config: StartupJobsConfig): Promise<Part
       params.append('page', currentPage.toString());
       params.append('startupOnly', config.startupOnly?.toString() || 'false');
       
-      config.fields?.forEach(field => {
-        params.append('fields[]', field);
-      });
+      if (config.fields && Array.isArray(config.fields)) {
+        config.fields.forEach(field => {
+          params.append('fields[]', field);
+        });
+      }
       
-      config.locations?.forEach(location => {
-        params.append('locations[]', location);
-      });
+      if (config.locations && Array.isArray(config.locations)) {
+        config.locations.forEach(location => {
+          params.append('locations[]', location);
+        });
+      }
       
-      config.locationPreference?.forEach(pref => {
-        params.append('locationPreference[]', pref);
-      });
+      if (config.locationPreference && Array.isArray(config.locationPreference)) {
+        config.locationPreference.forEach(pref => {
+          params.append('locationPreference[]', pref);
+        });
+      }
       
-      config.seniority?.forEach(level => {
-        params.append('seniority[]', level);
-      });
+      if (config.seniority && Array.isArray(config.seniority)) {
+        config.seniority.forEach(level => {
+          params.append('seniority[]', level);
+        });
+      }
 
       const url = `https://core.startupjobs.cz/api/search/offers?${params.toString()}`;
-      console.log(`Fetching StartupJobs page ${currentPage}: ${url}`);
       
       try {
         const response = await axios.get<StartupJobsApiResponse>(url, {
@@ -50,36 +60,77 @@ export async function scrapeStartupJobs(config: StartupJobsConfig): Promise<Part
           timeout: 30000
         });
 
-        const jobs = response.data.data.map((job: StartupJobsOffer) => ({
-          title: job.title.cs,
-          company: job.company.name,
-          location: job.location,
-          description: job.description.cs,
-          url: job.url,
-          source: JOB_SOURCES.STARTUPJOBS,
-          salary: job.salary ? 
-            `${job.salary.from || ''}-${job.salary.to || ''} ${job.salary.currency || ''}`.trim() : 
-            undefined,
-          tags: job.tags,
-          postedDate: new Date(job.created_at),
-        }));
+        const responseData = Array.isArray(response.data) ? response.data : response.data.data;
+        
+        if (!responseData || !Array.isArray(responseData)) {
+          console.log(`Invalid response structure on page ${currentPage}, stopping`);
+          break;
+        }
+
+        const generateSlug = (title: string): string => {
+          return title
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        };
+        
+        const jobs = responseData.map((job: StartupJobsOffer) => {
+          const cleanDescription = job.description.cs
+            .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+            .replace(/<script[^>]*>.*?<\/script>/gi, '')
+            .replace(/<style[^>]*>.*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          const slug = generateSlug(job.title.cs);
+          const generatedUrl = `https://www.startupjobs.cz/nabidka/${job.displayId}/${slug}`;
+          
+          const location = job.location || 
+                          (job.locations && job.locations.length > 0 
+                            ? job.locations.map(loc => loc.name.cs).join(', ')
+                            : undefined);
+          
+          return {
+            title: job.title.cs,
+            company: job.company.name,
+            location,
+            description: cleanDescription,
+            url: job.url || generatedUrl,
+            source: JOB_SOURCES.STARTUPJOBS,
+            salary: job.salary ? 
+              `${job.salary.from || ''}-${job.salary.to || ''} ${job.salary.currency || ''}`.trim() : 
+              undefined,
+            tags: job.tags,
+            postedDate: job.created_at ? new Date(job.created_at) : new Date(),
+          };
+        });
         
         allJobs.push(...jobs);
         
-        hasMorePages = currentPage < response.data.meta.last_page;
+        if (onJobScraped) {
+          for (const job of jobs) {
+            await onJobScraped(job);
+          }
+        }
+        
+        const meta = Array.isArray(response.data) ? null : response.data.meta;
+        hasMorePages = meta?.last_page ? currentPage < meta.last_page : false;
         currentPage++;
         
-        console.log(`Page ${currentPage - 1}: Found ${jobs.length} jobs, Total so far: ${allJobs.length}`);
-        
+        if (jobs.length > 0) {
+          console.log(`Page ${currentPage - 1}: ${jobs.length} jobs (${allJobs.length} total)`);
+        }
         if (jobs.length === 0) {
-          console.log('No jobs found on current page, stopping');
           break;
         }
       } catch (error) {
         if (error instanceof Error && 'response' in error) {
           const axiosError = error as { response?: { status: number } };
           if (axiosError.response?.status && axiosError.response.status >= 400) {
-            console.log(`Got ${axiosError.response.status} error on page ${currentPage}, stopping pagination`);
+            console.log(`HTTP ${axiosError.response.status} on page ${currentPage}, stopping`);
             break;
           }
         }
