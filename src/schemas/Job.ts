@@ -1,24 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import type { Job as JobType } from '@/types';
 
-export interface IJob extends Document {
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  url: string;
-  source: 'startupjobs' | 'jobs.cz';
-  salary?: string;
-  tags: string[];
+export interface IJob extends Omit<JobType, '_id' | 'postedDate' | 'scrapedAt'>, Document {
   postedDate: Date;
   scrapedAt: Date;
-  processed: boolean;
-  aiAnalysis?: {
-    summary: string;
-    skills: string[];
-    seniority: string;
-    remote: boolean;
-    score: number;
-  };
 }
 
 const JobSchema: Schema = new Schema({

@@ -52,6 +52,48 @@ export interface JobAnalysis {
   score: number;
 }
 
+// Core Job interface - plain object without Mongoose Document methods
+export interface Job {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  url: string;
+  source: 'startupjobs' | 'jobs.cz';
+  salary?: string;
+  tags: string[];
+  postedDate: Date | string;
+  scrapedAt: Date | string;
+  processed: boolean;
+  aiAnalysis?: JobAnalysis;
+}
+
+// Database response format for API endpoints
+export interface JobData extends Omit<Job, 'postedDate' | 'scrapedAt'> {
+  postedDate: string;
+  scrapedAt: string;
+}
+
+// Database query and pagination interfaces
+export interface DatabaseData {
+  jobs: JobData[];
+  pagination: {
+    total: number;
+    limit: number;
+    skip: number;
+    hasMore: boolean;
+  };
+  statistics: {
+    total: number;
+    processed: number;
+    unprocessed: number;
+    sources: string[];
+    avgScore: number;
+  };
+  sourceBreakdown: Array<{ _id: string; count: number }>;
+}
+
 export interface StartupJobsApiResponse {
   '@context': string;
   '@id': string;
@@ -173,16 +215,6 @@ export interface StartupJobsOffer {
     isTopped: boolean;
   }>;
   slug: string;
-}
-
-export interface Job {
-  _id: string;
-  title: string;
-  company: string;
-  location: string;
-  source: string;
-  url: string;
-  aiAnalysis?: JobAnalysis;
 }
 
 export interface CachedConnection {
