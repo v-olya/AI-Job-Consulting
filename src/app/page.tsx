@@ -13,7 +13,11 @@ import { useJobCards } from '@/hooks/useJobCards';
 export default function Home() {
   const router = useRouter();
   const [config, setConfig] = useState<ScrapingConfig>();
-  const [scraping, setScraping] = useState(false);
+  const [scrapingStates, setScrapingStates] = useState<Record<string, boolean>>({
+    startupjobs: false,
+    'jobs.cz': false,
+    all: false
+  });
   const [lastScrapeResult, setLastScrapeResult] = useState<ScrapingResult>();
   const [displayLimit, setDisplayLimit] = useState(5);
   const { topJobs, loading: loadingJobs, refetch: refetchTopJobs } = useJobCards(50);
@@ -35,7 +39,7 @@ export default function Home() {
   };
 
   const handleScrape = async (source: string) => {
-    setScraping(true);
+    setScrapingStates(prev => ({ ...prev, [source]: true }));
     setLastScrapeResult(undefined);
     
     try {
@@ -58,7 +62,7 @@ export default function Home() {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
-      setScraping(false);
+      setScrapingStates(prev => ({ ...prev, [source]: false }));
     }
   };
 
@@ -67,7 +71,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Job Scraper Dashboard
+            Job Consultant
           </h1>
           <p className="text-gray-600">Discover and analyze job opportunities with AI-powered insights</p>
         </header>
@@ -77,26 +81,26 @@ export default function Home() {
         <div className="mb-8 flex flex-wrap gap-4">
           <GradientButton
             onClick={() => handleScrape('startupjobs')}
-            disabled={scraping}
+            disabled={scrapingStates.startupjobs}
             variant="blue"
           >
-            {scraping ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+            {scrapingStates.startupjobs ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
           </GradientButton>
           
           <GradientButton
             onClick={() => handleScrape('jobs.cz')}
-            disabled={scraping}
+            disabled={scrapingStates['jobs.cz']}
             variant="green"
           >
-            {scraping ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+            {scrapingStates['jobs.cz'] ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
           </GradientButton>
           
           <GradientButton
             onClick={() => handleScrape('all')}
-            disabled={scraping}
+            disabled={scrapingStates.all}
             variant="purple"
           >
-            {scraping ? '⏳ Scraping...' : '⚡ Scrape All'}
+            {scrapingStates.all ? '⏳ Scraping...' : '⚡ Scrape All'}
           </GradientButton>
         </div>
 
