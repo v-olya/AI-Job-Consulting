@@ -71,7 +71,7 @@ export async function scrapeStartupJobs(
         const data = await response.json() as StartupJobsApiResponse;
         const responseData = Array.isArray(data) ? data : data.data;
         
-        if (!responseData || !Array.isArray(responseData)) {
+        if (!Array.isArray(responseData)) {
           console.log(`Invalid response structure on page ${currentPage}, stopping`);
           break;
         }
@@ -97,7 +97,7 @@ export async function scrapeStartupJobs(
           const generatedUrl = `https://www.startupjobs.cz/nabidka/${job.displayId}/${slug}`;
           
           const location = job.location || 
-                          (job.locations && job.locations.length > 0 
+                          (job.locations?.length
                             ? job.locations.map(loc => loc.name.cs).join(', ')
                             : undefined);
           
@@ -128,12 +128,12 @@ export async function scrapeStartupJobs(
         hasMorePages = meta?.last_page ? currentPage < meta.last_page : false;
         currentPage++;
         
-        if (jobs.length > 0) {
+        if (jobs.length) {
           console.log(`Page ${currentPage - 1}: ${jobs.length} jobs (${allJobs.length} total)`);
-        }
-        if (jobs.length === 0) {
+        } else { 
           break;
         }
+
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           console.log(`Request timeout on page ${currentPage}, stopping`);

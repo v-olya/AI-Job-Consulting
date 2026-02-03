@@ -26,14 +26,14 @@ function formatSalary(salary?: StartupJobsOffer['salary']): string | undefined {
   if (from) parts.push(from.toString());
   if (to) parts.push(to.toString());
   
-  if (parts.length === 0) return undefined;
+  if (!parts.length) return undefined;
   
   const range = parts.length === 2 ? `${parts[0]}-${parts[1]}` : parts[0];
   return `${range} ${currency || 'CZK'}`;
 }
 
 function extractLocation(locations: StartupJobsOffer['locations']): string {
-  if (!locations || locations.length === 0) return 'Not specified';
+  if (!locations?.length) return 'Not specified';
   
   return locations
     .map(loc => loc.name.cs || loc.name.en || 'Unknown')

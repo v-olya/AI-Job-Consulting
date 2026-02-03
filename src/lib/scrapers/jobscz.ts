@@ -85,7 +85,7 @@ export async function scrapeJobsCz(
         }))
       );
       
-      if (jobUrls.length === 0) {
+      if (!jobUrls.length) {
         break;
       }
       
@@ -141,43 +141,30 @@ async function scrapeJobDetail(page: Page, jobUrl: string): Promise<Partial<IJob
       const content = await page.content();
       const $ = cheerio.load(content);
       
-      const title = $('[data-test="job-title"], .job-title, h1[class*="title"]').first().text().trim() ||
-                    $('h1').first().text().trim();
-      
-      const company = $('.JobDescriptionHeading').siblings('.IconWithText').find('p').text().trim() || 
-                      $('.JobDescriptionHeading h1').text().trim() || 
-                      'noName';
-      
-      const descriptionElement = $('[data-test="jd-body-richtext"]');
-      let description = '';
-      
-      if (descriptionElement.length > 0) {
-        description = descriptionElement.text().trim();
-      } else {
-        const bodyHtml = $('body').html() || '';
-        description = stripHtmlAndPreserveSpaces(bodyHtml);
+      const title = $('h1').first().text().trim();
+      if (!title) {
+        return null;
       }
       
+      const company = $('.JobDescriptionHeading').siblings('.IconWithText').find('p').text().trim() || '';
+      const descriptionElement = $('[data-test="jd-body-richtext"]');
+      const description = descriptionElement?.text().trim() ?? stripHtmlAndPreserveSpaces($('body').html() || '');;
+
       const locationSelectors = [
-        '[data-test="job-location"]',
-        '[data-testid="job-location"]', 
-        '.job-location',
-        '[class*="location"]',
-        '[datatrackevent="JD.Map"]'
+        '[data-test="jd-info-location"]',
+        '[class*="location"]'
       ];
       
       let location = DEFAULT_LOCATION;
       for (const selector of locationSelectors) {
-        const loc = $(selector).first().text().trim();
+        const loc = $(selector)?.first().text().trim();
         if (loc) {
           location = loc;
           break;
         }
       }
       
-      if (!title || !company) {
-        return null;
-      }
+
       
       return {
         title,

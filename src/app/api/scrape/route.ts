@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       console.log(`Jobs.cz scraping complete: ${jobsCzJobs.length} jobs, ${savedJobs.length} saved`);
     }
     
-    if (allScrapedJobs.length === 0) {
+    if (!allScrapedJobs.length) {
       return NextResponse.json({
         success: true,
         message: FE_ERROR_MESSAGES.NO_JOBS_FOUND,
