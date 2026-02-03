@@ -1,13 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ScrapingConfig, ScrapingResult } from '@/types';
+import { JobCard } from '@/components/JobCard';
+import { ConfigSection } from '@/components/ConfigSection';
+import { ScrapeResultAlert } from '@/components/ScrapeResultAlert';
+import { OutlineButton } from '@/components/buttons/OutlineButton';
+import { GradientButton } from '@/components/buttons/GradientButton';
+import { useJobCards } from '@/hooks/useJobCards';
 
 export default function Home() {
-  const [config, setConfig] = useState<ScrapingConfig | null>(null);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [config, setConfig] = useState<ScrapingConfig>();
   const [scraping, setScraping] = useState(false);
-  const [lastScrapeResult, setLastScrapeResult] = useState<ScrapingResult | null>(null);
+  const [lastScrapeResult, setLastScrapeResult] = useState<ScrapingResult>();
+  const [displayLimit, setDisplayLimit] = useState(5);
+  const { topJobs, loading: loadingJobs, refetch: refetchTopJobs } = useJobCards(50);
 
   useEffect(() => {
     fetchConfig();
@@ -27,7 +36,7 @@ export default function Home() {
 
   const handleScrape = async (source: string) => {
     setScraping(true);
-    setLastScrapeResult(null);
+    setLastScrapeResult(undefined);
     
     try {
       const response = await fetch('/api/scrape', {
@@ -39,6 +48,10 @@ export default function Home() {
       const result = await response.json();
       setLastScrapeResult(result);
       
+      if (result.success) {
+        refetchTopJobs();
+      }
+      
     } catch (error) {
       setLastScrapeResult({ 
         success: false, 
@@ -49,137 +62,100 @@ export default function Home() {
     }
   };
 
-
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Job Scraper Dashboard</h1>
-      
-      {/* Configuration Display */}
-      {config && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h2 className="text-lg font-semibold mb-3">Current Configuration</h2>
-          <div className="grid md:grid-cols-2 gap-6 text-sm">
-            <div className="space-y-3">
-              <h3 className="font-medium text-blue-700 border-b border-blue-200 pb-1">StartupJobs.cz</h3>
-              <div>
-                <span className="font-medium text-gray-700">Fields:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {config.startupJobs.fields?.map((field: string, idx: number) => (
-                    <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                      {field}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="flex gap-4">
-                  <div>
-                    <span className="font-medium text-gray-700">Seniority:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.startupJobs.seniority?.map((level: string, idx: number) => (
-                        <span key={idx} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
-                          {level}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Work Type:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {config.startupJobs.locationPreference?.map((pref: string, idx: number) => (
-                        <span key={idx} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
-                          {pref}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Job Scraper Dashboard
+          </h1>
+          <p className="text-gray-600">Discover and analyze job opportunities with AI-powered insights</p>
+        </header>
+        
+        {config && <ConfigSection config={config} />}
+        
+        <div className="mb-8 flex flex-wrap gap-4">
+          <GradientButton
+            onClick={() => handleScrape('startupjobs')}
+            disabled={scraping}
+            variant="blue"
+          >
+            {scraping ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+          </GradientButton>
+          
+          <GradientButton
+            onClick={() => handleScrape('jobs.cz')}
+            disabled={scraping}
+            variant="green"
+          >
+            {scraping ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+          </GradientButton>
+          
+          <GradientButton
+            onClick={() => handleScrape('all')}
+            disabled={scraping}
+            variant="purple"
+          >
+            {scraping ? '⏳ Scraping...' : '⚡ Scrape All'}
+          </GradientButton>
+        </div>
+
+        {lastScrapeResult && (
+          <ScrapeResultAlert 
+            result={lastScrapeResult} 
+            onClose={() => setLastScrapeResult(undefined)} 
+          />
+        )}
+
+        <section className="mt-12">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800">Top AI-Rated Jobs</h2>
+              <p className="text-gray-600 text-sm mt-1">Highest scoring opportunities based on AI analysis</p>
             </div>
-            <div className="space-y-3">
-              <h3 className="font-medium text-green-700 border-b border-green-200 pb-1">Jobs.cz</h3>
-              <div>
-                <span className="font-medium text-gray-700">Search Terms:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {config.jobsCz.queries?.map((query: string, idx: number) => (
-                    <span key={idx} className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                      {query}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Location:</span>
-                <span className="ml-2 text-gray-600">{config.jobsCz.locality?.label} ({config.jobsCz.locality?.radius}km radius)</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Pages:</span>
-                <span className="ml-2 text-gray-600">Until error (no limit)</span>
-              </div>
+            <div className="flex gap-3">
+              <OutlineButton onClick={() => router.push('/database')}>
+                Explore Database
+              </OutlineButton>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Scraping Controls */}
-      <div className="mb-6 space-x-4">
-        <button
-          onClick={() => handleScrape('startupjobs')}
-          disabled={scraping}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-        >
-          {scraping ? 'Scraping...' : 'Scrape StartupJobs'}
-        </button>
-        
-        <button
-          onClick={() => handleScrape('jobs.cz')}
-          disabled={scraping}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
-        >
-          {scraping ? 'Scraping...' : 'Scrape Jobs.cz'}
-        </button>
-        
-        <button
-          onClick={() => handleScrape('all')}
-          disabled={scraping}
-          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
-        >
-          {scraping ? 'Scraping...' : 'Scrape All'}
-        </button>
-        
-        <button
-          onClick={() => window.location.href = '/database'}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          Explore the Database
-        </button>
-      </div>
 
-      {/* Last Scrape Result */}
-      {lastScrapeResult && (
-        <div className={`mb-6 p-4 rounded-lg ${
-          lastScrapeResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-        }`}>
-          <h3 className="font-semibold mb-2">
-            {lastScrapeResult.success ? '✅ Scraping Complete' : '❌ Scraping Failed'}
-          </h3>
-          {lastScrapeResult.success ? (
-            <div className="text-sm">
-              <p>{lastScrapeResult.message}</p>
-              {lastScrapeResult.stats && (
-                <div className="mt-2">
-                  <p>Total scraped: {lastScrapeResult.stats.totalScraped}</p>
-                  <p>New jobs: {lastScrapeResult.stats.newJobs}</p>
-                  <p>Skipped existing: {lastScrapeResult.stats.skippedJobs}</p>
-                  <p>Data file: {lastScrapeResult.stats.dataFile}</p>
+          {loadingJobs ? (
+            <div className="text-center py-16">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="text-gray-500 mt-4">Loading top jobs...</p>
+            </div>
+          ) : topJobs.length > 0 ? (
+            <>
+              <div className="space-y-4">
+                {topJobs.slice(0, displayLimit).map((job, index) => (
+                  <div key={job._id} className="relative">
+                    <div className="absolute -left-4 top-4 bg-gradient-to-br from-blue-500 to-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                      {index + 1}
+                    </div>
+                    <JobCard job={job} />
+                  </div>
+                ))}
+              </div>
+              {displayLimit < topJobs.length && (
+                <div className="mt-6 text-center">
+                  <OutlineButton onClick={() => setDisplayLimit(prev => prev + 5)}>
+                    Show More ({topJobs.length - displayLimit} remaining)
+                  </OutlineButton>
                 </div>
               )}
-            </div>
+            </>
           ) : (
-            <p className="text-red-600">{lastScrapeResult.error}</p>
+            <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="text-6xl mb-4">📭</div>
+              <p className="text-gray-600 text-lg font-medium">No processed jobs found yet</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Scrape some jobs and process them with AI to see top-rated positions here
+              </p>
+            </div>
           )}
-        </div>
-      )}
+        </section>
+      </div>
     </div>
   );
 }
