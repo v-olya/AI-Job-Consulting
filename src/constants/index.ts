@@ -9,7 +9,15 @@ export const DATABASE_CONFIG = {
 
 export const OLLAMA_CONFIG = {
   DEFAULT_HOST: 'http://localhost:11434',
-  DEFAULT_MODEL: 'llama3.2',
+  DEFAULT_MODEL: 'qwen3-vl:235b-cloud',
+  TIMEOUT: {
+    REQUEST: 180000, // 3 minutes
+    HEADERS: 30000,  // 30 seconds for headers
+  },
+  RETRY: {
+    MAX_ATTEMPTS: 3,
+    DELAY: 2000,
+  },
 } as const;
 
 export const THROTTLING_CONFIG = {
@@ -76,22 +84,21 @@ Neřídíš se mými předsudky ani mými filtry. Používáš svůj vlastní pr
 
 ${MY_CONTEXT}
 
-## Jak máš hodnotit pracovní nabídku
+## Jak máš posuzovat pracovní nabídku
 
-A) Co říká samotná nabídka
+1) Co říká samotná nabídka:
   - co je explicitně napsané 
   - co je implicitně naznačené 
   - co chybí, ale mělo by tam být 
   - jaký typ člověka by se do role hodil 
-  - jaké jsou skryté signály v jazyce, tónu a struktuře 
 
-B) Porovnání se mnou (na základě kontextu)
+2) Porovnání se mnou na základě kontextu:
   - jak by moje zkušenosti zapadly do očekávání 
   - jak by moje osobnost zapadla do prostředí 
 
-C) Nezávislý úsudek
-  - Tvoje hodnocení nesmí být jen odrazem mých preferencí.
-  - Chci, aby sis zachoval odstup a poskytl mi pohled zvenčí.
+3) Nezávislý úsudek:
+  - Tvoje hodnocení nesmí být jen odrazem mých preferencí
+  - Chci, aby sis zachoval odstup a poskytl mi pohled zvenčí
 
 ## Výstupní formát
 
@@ -101,11 +108,26 @@ Vrať POUZE validní JSON objekt s touto strukturou:
   "recommendation": "Reagovat" | "Nereagovat" | "Zvážit",
   "body": {
     "summary": "Nezávislé shrnutí nabídky: krátké, s důrazem na důležité",
-    "analysis": "Analýza mezi řádky: co z nabídky vyplývá nepřímo",
+    "analysis": "Tvá analýza",
     "risks_opportunities": "Rizika a příležitosti"
   },
-  "score": 1-10
+  "score": 1-10,
+  "companyName": "Název společnosti extrahovaný z popisu nabídky (pokud je v textu zmíněn)"
 }
+
+DŮLEŽITÉ: Pokud nedokážeš z popisu pozice identifikovat název společnosti, vrať prazdné "companyName".
+
+## Jak máš vyvodit score:
+
+- Nehodnotíš nabídku, ale vhodnost kandidáta pro ni
+- 1 = velmi špatná shoda, zásadní nesoulad
+- 10 = výborná shoda, silné argumenty pro reakci
+
+## Tipy ohledně recommendation:
+
+- "Zvážit" používej jen tehdy, pokud jsou pro a proti vyrovnané
+- Pokud je nabídka výrazně vhodná nebo nevhodná, doporučuj „Reagovat“ nebo „Nereagovat“
+- Doporučuj „Reagovat“ jen tehdy, pokud ti to dává smysl
 
 `;
 
@@ -126,4 +148,48 @@ export const FE_ERROR_MESSAGES = {
   INVALID_AI_RESPONSE: 'Invalid AI response format',
   PROCESSING_ERROR_PREFIX: 'Error:',
   LOADING: 'Loading...',
+} as const;
+
+export const COMPANY_RESEARCH_PROMPTS = {
+  SYSTEM: `Jsi asistent pro výzkum firem. Analyzuj výsledky vyhledávání a extrahuj strukturované informace o společnosti.
+Odpověz POUZE validním JSON objektem bez jakéhokoliv dalšího textu, markdown formátování nebo vysvětlení.
+Struktura:
+{
+  "name": "název společnosti",
+  "website": "URL nebo null",
+  "keyFacts": ["fakt1", "fakt2", "fakt3"]
+}
+Odpovídej v češtině pouze v hodnotách JSON.`,
+  
+  USER_TEMPLATE: (companyName: string, searchContext: string) => 
+    `Na základě následujících výsledků vyhledávání o "${companyName}" extrahuj a strukturuj informace o společnosti:
+
+${searchContext}
+
+Zaměř se na nejdůležitější obchodní fakta, která by byla relevantní pro uchazeče o zaměstnání.`,
+
+  SCHEMA: {
+    type: "object",
+    properties: {
+      name: {
+        type: "string",
+        description: "Název společnosti"
+      },
+      website: {
+        type: ["string", "null"],
+        description: "Oficiální webová stránka nebo null pokud není nalezena"
+      },
+      keyFacts: {
+        type: "array",
+        items: {
+          type: "string"
+        },
+        description: "Array 3-5 klíčových faktů o společnosti",
+        minItems: 0,
+        maxItems: 10
+      }
+    },
+    required: ["name", "keyFacts"],
+    additionalProperties: false
+  }
 } as const;
