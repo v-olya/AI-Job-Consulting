@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "Code Quality Check",
+  "description": "After agent completes code generation, run TS type checking and ESLint to ensure quality and DRY principles. Make sure you have not added unnecessary comment",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Before finalizing the response with generated code, please run type checking with `npx tsc --noEmit` and linting with `npx eslint . --ext .ts,.tsx,.js,.jsx`. Review any errors or warnings and ensure the code follows DRY (Don't Repeat Yourself) principles. Fix any issues and delete any unnecessary comments in the code."
+  },
+  "workspaceFolderName": "jobs",
+  "shortName": "code-quality-check"
+}
