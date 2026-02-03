@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { IJob } from '@/schemas/Job';
 import { API_THROTTLER } from '@/lib/utils/throttlers';
 import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@/types';
@@ -48,7 +47,7 @@ export async function scrapeStartupJobs(
       const url = `https://core.startupjobs.cz/api/search/offers?${params.toString()}`;
       
       try {
-        const response = await axios.get<StartupJobsApiResponse>(url, {
+        const response = await fetch(url, {
           headers: {
             'Accept': 'application/json',
             'User-Agent': BROWSER_CONFIG.USER_AGENT,
@@ -57,10 +56,19 @@ export async function scrapeStartupJobs(
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
           },
-          timeout: 30000
+          signal: AbortSignal.timeout(30000)
         });
 
-        const responseData = Array.isArray(response.data) ? response.data : response.data.data;
+        if (!response.ok) {
+          if (response.status >= 400) {
+            console.log(`HTTP ${response.status} on page ${currentPage}, stopping`);
+            break;
+          }
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json() as StartupJobsApiResponse;
+        const responseData = Array.isArray(data) ? data : data.data;
         
         if (!responseData || !Array.isArray(responseData)) {
           console.log(`Invalid response structure on page ${currentPage}, stopping`);
@@ -116,7 +124,7 @@ export async function scrapeStartupJobs(
           }
         }
         
-        const meta = Array.isArray(response.data) ? null : response.data.meta;
+        const meta = Array.isArray(data) ? null : data.meta;
         hasMorePages = meta?.last_page ? currentPage < meta.last_page : false;
         currentPage++;
         
@@ -127,12 +135,9 @@ export async function scrapeStartupJobs(
           break;
         }
       } catch (error) {
-        if (error instanceof Error && 'response' in error) {
-          const axiosError = error as { response?: { status: number } };
-          if (axiosError.response?.status && axiosError.response.status >= 400) {
-            console.log(`HTTP ${axiosError.response.status} on page ${currentPage}, stopping`);
-            break;
-          }
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log(`Request timeout on page ${currentPage}, stopping`);
+          break;
         }
         throw error;
       }

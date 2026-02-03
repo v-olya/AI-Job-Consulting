@@ -11,6 +11,20 @@ import {
   DEFAULT_LOCATION 
 } from '@/constants';
 
+function stripHtmlAndPreserveSpaces(html: string): string {
+  const $ = cheerio.load(html);
+  
+  $('script, style, iframe, noscript').remove();
+  
+  $('p, div, br, li, h1, h2, h3, h4, h5, h6').each((_, elem) => {
+    $(elem).append(' ');
+  });
+  
+  return $('body').text()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export async function scrapeJobsCz(
   config: JobsCzConfig,
   onJobScraped?: (job: Partial<IJob>) => Promise<void>
@@ -147,9 +161,15 @@ async function scrapeJobDetail(page: Page, jobUrl: string): Promise<Partial<IJob
                       $('.JobDescriptionHeading h1').text().trim() || 
                       'noName';
       
-      const description = $('[data-test="job-description"], .job-description, [class*="description"]').text().trim() ||
-                         $('.content, .job-content, main').text().trim() ||
-                         $('body').text().trim();
+      const descriptionElement = $('[data-test="jd-body-richtext"]');
+      let description = '';
+      
+      if (descriptionElement.length > 0) {
+        description = descriptionElement.text().trim();
+      } else {
+        const bodyHtml = $('body').html() || '';
+        description = stripHtmlAndPreserveSpaces(bodyHtml);
+      }
       
       const locationSelectors = [
         '[data-test="job-location"]',
