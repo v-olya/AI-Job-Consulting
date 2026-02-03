@@ -1,5 +1,7 @@
 import { JobData } from '@/types';
-import { formatDate, formatScore } from '@/lib/utils/textUtils';
+import { formatDate } from '@/lib/utils/textUtils';
+import { SectionHeader } from './SectionHeader';
+import { InfoSection } from './InfoSection';
 
 interface JobCardProps {
   job: JobData;
@@ -11,6 +13,11 @@ export function JobCard({ job }: JobCardProps) {
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-xl font-bold text-gray-800 flex-1">{job.title}</h3>
         <div className="flex gap-2 ml-4">
+          {job.processed && job.aiAnalysis?.score && (
+            <button className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100">
+              {job.aiAnalysis.recommendation}&nbsp; ⭐{job.aiAnalysis.score}&thinsp;/10
+            </button>
+          )}
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             job.processed 
               ? 'bg-green-100 text-green-800' 
@@ -45,24 +52,65 @@ export function JobCard({ job }: JobCardProps) {
       )}
       
       {job.aiAnalysis && (
-        <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-100">
-          <h4 className="font-semibold text-sm mb-2 text-blue-900 flex items-center gap-2">
-            <span>🤖</span>
-            AI Analysis
-          </h4>
-          <p className="text-sm text-gray-700 mb-3 leading-relaxed">{job.aiAnalysis.summary}</p>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span className="bg-white px-3 py-1 rounded-full text-gray-700 font-medium">
-              👔 {job.aiAnalysis.seniority}
-            </span>
-            <span className="bg-white px-3 py-1 rounded-full text-gray-700 font-medium">
-              {job.aiAnalysis.remote ? '🏠 Remote' : '🏢 On-site'}
-            </span>
-            <span className="bg-white px-3 py-1 rounded-full text-blue-700 font-bold">
-              ⭐ {formatScore(job.aiAnalysis.score)}
-            </span>
+        <InfoSection 
+          colorFrom="blue" 
+          colorTo="purple" 
+        >
+          <SectionHeader 
+            icon="🤖" 
+            title="AI Analysis" 
+            colorClass="text-blue-900" 
+          />
+
+          {job.processed && (
+            <div className="space-y-3">
+              {job.aiAnalysis.body.summary && (
+                <p className="text-sm text-gray-700 leading-relaxed"><b className="underline pr-1">Shrnutí:</b> {job.aiAnalysis.body.summary}</p>
+              )}
+              {job.aiAnalysis.body.analysis && (
+                <p className="text-sm text-gray-700 leading-relaxed"><b className="underline pr-1">Analýza:</b> {job.aiAnalysis.body.analysis}</p>
+              )}
+              {job.aiAnalysis.body.risks_opportunities && (
+                <p className="text-sm text-gray-700 leading-relaxed"><b className="underline pr-1">Rizika a příležitosti:</b> {job.aiAnalysis.body.risks_opportunities}</p>
+              )}
+            </div>
+          )}
+        </InfoSection>
+      )}
+
+      {job.companyResearch?.name && (
+        <InfoSection 
+          colorFrom="green" 
+          colorTo="emerald" 
+        >
+          <SectionHeader 
+            icon="🏢" 
+            title={job.companyResearch.name} 
+            colorClass="text-green-900" 
+          />
+          
+          <div className="space-y-2">
+            <span className="text-sm">Website:</span> {job.companyResearch.website && (
+              <a 
+                href={job.companyResearch.website} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                {job.companyResearch.website}
+              </a>
+            )}
+            {job.companyResearch.keyFacts?.length > 0 && (
+              <div className="text-sm text-gray-700">
+                <ul className="list-disc list-inside space-y-1 mt-1">
+                  {job.companyResearch.keyFacts.map((fact, index) => (
+                    <li key={index} className="leading-relaxed">{fact.trim()}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-        </div>
+        </InfoSection>
       )}
       
       <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 text-sm text-gray-500">
