@@ -64,14 +64,7 @@ export const HTML_ENTITIES = {
   '&#39;': "'",
 } as const;
 
-export const SENIORITY_LEVELS = {
-  JUNIOR: 'junior',
-  MEDIOR: 'medior',
-  SENIOR: 'senior',
-  LEAD: 'lead',
-} as const;
-
-export const PROMPT = `
+export const SYSTEM_PROMPT = `
 ## Role AI
 
 Chci, aby ses choval jako nezávislý kariérní poradce, který mě zná.
@@ -102,14 +95,35 @@ C) Nezávislý úsudek
 
 ## Výstupní formát
 
-Stručné zdůvodnění v této struktuře:
+Vrať POUZE validní JSON objekt s touto strukturou:
 
-1. ** Celkové doporučení **: Reagovat / Nereagovat / Zvážit. 
-2. Nezávislé shrnutí nabídky: krátké, s důrazem na důležité. 
-3. Analýza mezi řádky: co z nabídky vyplývá nepřímo. 
-4. Rizika a příležitosti.
+{
+  "recommendation": "Reagovat" | "Nereagovat" | "Zvážit",
+  "body": {
+    "summary": "Nezávislé shrnutí nabídky: krátké, s důrazem na důležité",
+    "analysis": "Analýza mezi řádky: co z nabídky vyplývá nepřímo",
+    "risks_opportunities": "Rizika a příležitosti"
+  },
+  "score": 1-10
+}
 
-## Vstup: PRACOVNÍ NABÍDKA
-
-{{jobOffer}}
 `;
+
+export const FE_ERROR_MESSAGES = {
+  UNKNOWN_ERROR: 'Unknown error',
+  DATABASE_ACCESS_DENIED: 'Database access not allowed in production',
+  DATABASE_ACCESS_DENIED_TITLE: 'Access Denied',
+  DATABASE_ACCESS_DENIED_DESCRIPTION: 'Database viewer is not available in production environment for security reasons.',
+  DATABASE_LOAD_FAILED: 'Failed to load database data',
+  DATABASE_ERROR_TITLE: 'Error',
+  AI_PROCESSING_ERROR: 'AI processing error',
+  AI_ANALYSIS_FAILED: 'AI analysis failed for',
+  JOB_SAVE_FAILED: 'Failed to save',
+  OLLAMA_NOT_AVAILABLE: 'Ollama not available - jobs will be saved without AI analysis',
+  NO_JOBS_FOUND: 'No jobs found to scrape',
+  NO_UNPROCESSED_JOBS: 'No unprocessed jobs found',
+  SCRAPING_FAILED: 'Scraping failed',
+  INVALID_AI_RESPONSE: 'Invalid AI response format',
+  PROCESSING_ERROR_PREFIX: 'Error:',
+  LOADING: 'Loading...',
+} as const;

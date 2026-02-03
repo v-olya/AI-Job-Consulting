@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { DatabaseData } from '@/types';
+import { FE_ERROR_MESSAGES } from '@/constants';
 import { JobCard } from '@/components/JobCard';
 import { StatCard } from '@/components/StatCard';
 import { PaginationButton } from '@/components/buttons/PaginationButton';
@@ -59,10 +60,10 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         setProcessingResult(result.message);
         router.refresh();
       } else {
-        setProcessingResult(`Error: ${result.error}`);
+        setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${result.error}`);
       }
     } catch (error) {
-      setProcessingResult(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR}`);
     } finally {
       setIsProcessing(false);
     }

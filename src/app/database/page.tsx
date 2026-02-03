@@ -2,11 +2,12 @@ import { Suspense } from 'react';
 import { connectDB } from '@/lib/utils/database';
 import { Job } from '@/schemas/Job';
 import { DatabaseData } from '@/types';
+import { FE_ERROR_MESSAGES } from '@/constants';
 import DatabaseClient from './DatabaseClient';
 
 async function getDatabaseData(searchParams: Record<string, string>): Promise<DatabaseData> {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Database access not allowed in production');
+    throw new Error(FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED);
   }
 
   await connectDB();
@@ -35,8 +36,8 @@ async function getDatabaseData(searchParams: Record<string, string>): Promise<Da
           $and: [
             { $eq: ['$processed', true] },
             { $ne: ['$aiAnalysis', null] },
-            { $ne: ['$aiAnalysis.summary', 'Job analysis failed'] },
-            { $not: { $regexMatch: { input: '$aiAnalysis.summary', regex: 'Analysis unavailable' } } }
+            { $ne: ['$aiAnalysis.recommendation', null] },
+            { $ne: ['$aiAnalysis.body', null] }
           ]
         }
       }
@@ -92,8 +93,8 @@ export default async function DatabaseViewer({
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <h1 className="text-xl font-bold mb-2">Access Denied</h1>
-          <p>Database viewer is not available in production environment for security reasons.</p>
+          <h1 className="text-xl font-bold mb-2">{FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED_TITLE}</h1>
+          <p>{FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED_DESCRIPTION}</p>
         </div>
       </div>
     );
@@ -107,15 +108,15 @@ export default async function DatabaseViewer({
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <h1 className="text-xl font-bold mb-2">Error</h1>
-          <p>Failed to load database data: {error instanceof Error ? error.message : 'Unknown error'}</p>
+          <h1 className="text-xl font-bold mb-2">{FE_ERROR_MESSAGES.DATABASE_ERROR_TITLE}</h1>
+          <p>{FE_ERROR_MESSAGES.DATABASE_LOAD_FAILED}: {error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <Suspense fallback={<div className="p-8">Loading...</div>}>
+    <Suspense fallback={<div className="p-8">{FE_ERROR_MESSAGES.LOADING}</div>}>
       <DatabaseClient initialData={data} />
     </Suspense>
   );
