@@ -9,28 +9,28 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "type-check": "tsc --noEmit",
-    "preprocess": "tsx src/scripts/preprocess-startupjobs.ts"
+    "preprocess": "tsx src/scripts/preprocess-startupjobs.ts",
+    "postinstall": "npx tsx src/scripts/setup.ts"
   },
   "dependencies": {
+    "cheerio": "^1.0.0",
+    "mongoose": "^8.8.4",
     "next": "16.1.6",
+    "ollama": "^0.6.3",
+    "playwright": "^1.48.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "playwright": "^1.48.0",
-    "mongoose": "^8.8.4",
-    "axios": "^1.7.9",
-    "cheerio": "^1.0.0",
-    "ollama": "^0.5.11",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/cheerio": "^0.22.35",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@types/cheerio": "^0.22.35"
+    "typescript": "^5"
   }
 }

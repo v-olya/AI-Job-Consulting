@@ -1,0 +1,39 @@
+import { StartupJobsConfig, JobsCzConfig } from '@/types';
+
+export const SCRAPING_CONFIG = {
+  startupJobs: {
+    page: 1,
+    startupOnly: false,
+    fields: [
+      'full-stack-developer'
+    ],
+    locationPreference: ['hybrid', 'remote'],
+    seniority: ['junior', 'medior', 'senior']
+  } as StartupJobsConfig,
+  
+  jobsCz: {
+    queries: [
+      'TypeScript'
+    ],
+    locality: {
+      code: 'R200000',
+      label: 'Prague',
+      coords: '50.08455,14.41778',
+      radius: 30
+    },
+  } as JobsCzConfig
+};
+
+export function getScrapingConfig() {
+  const config = { ...SCRAPING_CONFIG };
+  
+  if (process.env.STARTUPJOBS_FIELDS) {
+    config.startupJobs.fields = process.env.STARTUPJOBS_FIELDS.split(',');
+  }
+  
+  if (process.env.JOBSCZ_QUERIES) {
+    config.jobsCz.queries = process.env.JOBSCZ_QUERIES.split(',');
+  }
+  
+  return config;
+}
