@@ -191,9 +191,10 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
               </div>
             </div>
             
-            <p className="text-gray-600 mb-2">{job.company} • {job.location}</p>
-            
-            {job.salary && <p className="text-green-600 mb-2">💰 {job.salary}</p>}
+            <p className="text-gray-600 mb-2">
+              {job.company}
+              {job.location && job.location !== 'Not detected' && ` • ${job.location}`}
+            </p>
             
             {job.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-2">
