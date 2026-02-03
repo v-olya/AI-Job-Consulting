@@ -44,13 +44,8 @@ export interface ScrapingResult {
   };
 }
 
-export interface JobAnalysis {
-  summary: string;
-  skills: string[];
-  seniority: string;
-  remote: boolean;
-  score: number;
-}
+import type { JobAnalysis } from '@/schemas/JobAnalysis';
+import type { CompanyInfo } from '@/schemas/CompanyInfo';
 
 // Core Job interface - plain object without Mongoose Document methods
 export interface Job {
@@ -73,6 +68,7 @@ export interface Job {
 export interface JobData extends Omit<Job, 'postedDate' | 'scrapedAt'> {
   postedDate: string;
   scrapedAt: string;
+  companyResearch?: CompanyInfo;
 }
 
 // Database query and pagination interfaces
@@ -220,4 +216,13 @@ export interface StartupJobsOffer {
 export interface CachedConnection {
   conn: typeof import('mongoose') | null;
   promise: Promise<typeof import('mongoose')> | null;
+}
+
+export interface CompanyResearchResponse {
+  success: boolean;
+  data?: {
+    companyInfo: CompanyInfo;
+    summary: string;
+  };
+  error?: string;
 }
