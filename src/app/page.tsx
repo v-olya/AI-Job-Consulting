@@ -18,6 +18,8 @@ export default function Home() {
     'jobs.cz': false,
     all: false
   });
+  
+  const isAnyScrapingActive = Object.values(scrapingStates).some(Boolean);
   const [lastScrapeResult, setLastScrapeResult] = useState<ScrapingResult>();
   const [displayLimit, setDisplayLimit] = useState(5);
   const { topJobs, loading: loadingJobs, refetch: refetchTopJobs } = useJobCards(50);
@@ -81,7 +83,7 @@ export default function Home() {
         <div className="mb-8 flex flex-wrap gap-4">
           <GradientButton
             onClick={() => handleScrape('startupjobs')}
-            disabled={scrapingStates.startupjobs}
+            disabled={isAnyScrapingActive}
             variant="blue"
           >
             {scrapingStates.startupjobs ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
@@ -89,7 +91,7 @@ export default function Home() {
           
           <GradientButton
             onClick={() => handleScrape('jobs.cz')}
-            disabled={scrapingStates['jobs.cz']}
+            disabled={isAnyScrapingActive}
             variant="green"
           >
             {scrapingStates['jobs.cz'] ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
@@ -97,7 +99,7 @@ export default function Home() {
           
           <GradientButton
             onClick={() => handleScrape('all')}
-            disabled={scrapingStates.all}
+            disabled={isAnyScrapingActive}
             variant="purple"
           >
             {scrapingStates.all ? '⏳ Scraping...' : '⚡ Scrape All'}
