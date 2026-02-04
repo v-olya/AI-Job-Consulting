@@ -35,7 +35,7 @@ export async function processJobWithAI(
       description: jobData.description,
       location: jobData.location,
       salary: jobData.salary
-    });
+    }, signal);
 
     if (aiAnalysis) {
       const validatedAnalysis = JobAnalysisSchema.parse(aiAnalysis);
@@ -55,7 +55,7 @@ export async function processJobWithAI(
 
         if (companyNameForResearch && companyNameForResearch !== 'noName') {
           console.log(`Performing company research for: ${companyNameForResearch}`);
-          const companyInfo = await searchCompanyInfo(companyNameForResearch);
+          const companyInfo = await searchCompanyInfo(companyNameForResearch, signal);
           if (companyInfo) {
             result.companyResearch = CompanyInfoSchema.parse(companyInfo);
             console.log(`Company research completed for: ${companyNameForResearch}`);

@@ -1,16 +1,16 @@
-import { Ollama } from 'ollama';
 import { OLLAMA_CONFIG, COMPANY_RESEARCH_PROMPTS } from '@/constants';
 import { CompanyInfoSchema, companyInfoJsonSchema, type CompanyInfo } from '@/schemas/CompanyInfo';
 
-const ollama = new Ollama({ 
-  host: process.env.OLLAMA_HOST || OLLAMA_CONFIG.DEFAULT_HOST,
-  headers: process.env.OLLAMA_API_KEY ? {
-    'Authorization': `Bearer ${process.env.OLLAMA_API_KEY}`
-  } : undefined
-});
+import { createOllamaClient } from './ollama';
 
-export async function searchCompanyInfo(companyName: string): Promise<CompanyInfo | null> {
+export async function searchCompanyInfo(companyName: string, signal?: AbortSignal): Promise<CompanyInfo | null> {
+  const ollama = createOllamaClient(signal);
+
   try {
+    if (signal?.aborted) {
+      throw new Error('Operation cancelled');
+    }
+
     const searchResponse = await ollama.webSearch({
       query: `${companyName} company information business profile industry size location`,
       maxResults: 5
@@ -19,6 +19,10 @@ export async function searchCompanyInfo(companyName: string): Promise<CompanyInf
     if (!searchResponse?.results?.length) {
       console.warn(`No search results found for company: ${companyName}`);
       return null;
+    }
+
+    if (signal?.aborted) {
+      throw new Error('Operation cancelled');
     }
 
     const searchContext = searchResponse.results
@@ -53,6 +57,9 @@ export async function searchCompanyInfo(companyName: string): Promise<CompanyInf
     
     return companyInfo;
   } catch (error) {
+    if (signal?.aborted && (error instanceof Error && (error.message === 'Operation cancelled' || error.name === 'AbortError'))) {
+      throw error;
+    }
     console.error('Company research failed:', error);
     return null;
   }
