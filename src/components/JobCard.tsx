@@ -52,10 +52,7 @@ export function JobCard({ job }: JobCardProps) {
       )}
       
       {job.aiAnalysis && (
-        <InfoSection 
-          colorFrom="blue" 
-          colorTo="purple" 
-        >
+        <InfoSection variant="blue-purple">
           <SectionHeader 
             icon="🤖" 
             title="AI Analysis" 
@@ -79,10 +76,7 @@ export function JobCard({ job }: JobCardProps) {
       )}
 
       {job.companyResearch?.name && (
-        <InfoSection 
-          colorFrom="green" 
-          colorTo="emerald" 
-        >
+        <InfoSection variant="green-emerald">
           <SectionHeader 
             icon="🏢" 
             title={job.companyResearch.name} 
