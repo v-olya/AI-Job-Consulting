@@ -2,6 +2,7 @@ import { Ollama } from 'ollama';
 import { OLLAMA_CONFIG, SYSTEM_PROMPT } from '@/constants';
 import { JobAnalysisSchema, jobAnalysisJsonSchema, type JobAnalysis } from '@/schemas/JobAnalysis';
 import { analyzeError, getErrorDescription } from '@/lib/utils/errorUtils';
+import { Throttler, delay } from '@/lib/utils/throttlers';
 
 const ollama = new Ollama({ 
   host: process.env.OLLAMA_HOST || OLLAMA_CONFIG.DEFAULT_HOST,
@@ -9,12 +10,20 @@ const ollama = new Ollama({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), OLLAMA_CONFIG.TIMEOUT.REQUEST);
     
+    const headers: Record<string, string> = {
+      'Connection': 'keep-alive',
+    };
+    
+    if (process.env.OLLAMA_API_KEY) {
+      headers['Authorization'] = `Bearer ${process.env.OLLAMA_API_KEY}`;
+    }
+    
     return fetch(url, {
       ...options,
       signal: controller.signal,
       headers: {
         ...options?.headers,
-        'Connection': 'keep-alive',
+        ...headers,
       },
     }).finally(() => {
       clearTimeout(timeoutId);
@@ -22,9 +31,7 @@ const ollama = new Ollama({
   }
 });
 
-async function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const AI_THROTTLER = new Throttler(1000);
 
 export async function isOllamaAvailable(): Promise<boolean> {
   try {
@@ -67,6 +74,8 @@ ${jobData.description}`;
 
   for (let attempt = 1; attempt <= OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS; attempt++) {
     try {
+      await AI_THROTTLER.throttle();
+      
       console.log(`Analyzing job "${jobData.title}" (attempt ${attempt}/${OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS})`);
       
       const response = await ollama.chat({
