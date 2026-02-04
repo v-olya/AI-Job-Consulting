@@ -4,39 +4,48 @@ import { JobAnalysisSchema, jobAnalysisJsonSchema, type JobAnalysis } from '@/sc
 import { analyzeError, getErrorDescription } from '@/lib/utils/errorUtils';
 import { Throttler, delay } from '@/lib/utils/throttlers';
 
-const ollama = new Ollama({ 
-  host: process.env.OLLAMA_HOST || OLLAMA_CONFIG.DEFAULT_HOST,
-  fetch: (url, options) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), OLLAMA_CONFIG.TIMEOUT.REQUEST);
-    
-    const headers: Record<string, string> = {
-      'Connection': 'keep-alive',
-    };
-    
-    if (process.env.OLLAMA_API_KEY) {
-      headers['Authorization'] = `Bearer ${process.env.OLLAMA_API_KEY}`;
-    }
-    
-    return fetch(url, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        ...options?.headers,
-        ...headers,
-      },
-    }).finally(() => {
-      clearTimeout(timeoutId);
-    });
-  }
-});
-
 const AI_THROTTLER = new Throttler(1000);
+
+export function createOllamaClient(signal?: AbortSignal) {
+  return new Ollama({
+    host: process.env.OLLAMA_HOST || OLLAMA_CONFIG.DEFAULT_HOST,
+    fetch: (url, options) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), OLLAMA_CONFIG.TIMEOUT.REQUEST);
+
+      const headers: Record<string, string> = {
+        Connection: 'keep-alive',
+      };
+
+      if (process.env.OLLAMA_API_KEY) {
+        headers.Authorization = `Bearer ${process.env.OLLAMA_API_KEY}`;
+      }
+
+      if (signal) {
+        if (signal.aborted) {
+          controller.abort();
+        } else {
+          signal.addEventListener('abort', () => controller.abort(), { once: true });
+        }
+      }
+
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...options?.headers,
+          ...headers,
+        },
+      }).finally(() => {
+        clearTimeout(timeoutId);
+      });
+    },
+  });
+}
 
 export async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for availability check
+    const ollama = createOllamaClient();
     
     await ollama.chat({
       model: OLLAMA_CONFIG.DEFAULT_MODEL,
@@ -47,7 +56,6 @@ export async function isOllamaAvailable(): Promise<boolean> {
       }
     });
     
-    clearTimeout(timeoutId);
     return true;
   } catch (error) {
     console.log(`Ollama model ${OLLAMA_CONFIG.DEFAULT_MODEL} not available or not running:`, error);
@@ -61,7 +69,8 @@ export async function analyzeJob(jobData: {
   description: string;
   location: string;
   salary?: string;
-}): Promise<JobAnalysis | undefined> {
+}, signal?: AbortSignal): Promise<JobAnalysis | undefined> {
+  const ollama = createOllamaClient(signal);
   const jobOffer = `Název pozice: ${jobData.title}
 Společnost: ${jobData.company}
 Lokace: ${jobData.location}
@@ -74,6 +83,10 @@ ${jobData.description}`;
 
   for (let attempt = 1; attempt <= OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS; attempt++) {
     try {
+      if (signal?.aborted) {
+        throw new Error('Operation cancelled');
+      }
+      
       await AI_THROTTLER.throttle();
       
       console.log(`Analyzing job "${jobData.title}" (attempt ${attempt}/${OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS})`);
@@ -106,6 +119,10 @@ ${jobData.description}`;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       
+      if (signal?.aborted && (lastError.message === 'Operation cancelled' || lastError.name === 'AbortError')) {
+        throw lastError;
+      }
+      
       const errorAnalysis = analyzeError(lastError);
       const errorDescription = getErrorDescription(errorAnalysis);
       
@@ -123,7 +140,7 @@ ${jobData.description}`;
       if (attempt < OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS) {
         const delayMs = OLLAMA_CONFIG.RETRY.DELAY * attempt;
         console.log(`Waiting ${delayMs}ms before retry...`);
-        await delay(delayMs);
+        await delay(delayMs, signal);
       }
     }
   }
