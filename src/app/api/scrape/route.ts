@@ -7,14 +7,19 @@ import { isOllamaAvailable } from '@/lib/ai/ollama';
 import { processJobWithAI } from '@/lib/ai/jobProcessing';
 import { getScrapingConfig } from '@/configureFilters';
 import { FE_ERROR_MESSAGES } from '@/constants';
+import { registerAbortController, unregisterAbortController } from '../cancel/route';
 
 
 async function processAndSaveJob(
   jobData: Partial<IJob>,
   ollamaAvailable: boolean,
   savedJobs: IJob[],
-  skippedJobs: string[]
+  skippedJobs: string[],
+  signal?: AbortSignal
 ): Promise<void> {
+  if (signal?.aborted) {
+    throw new Error('Operation cancelled');
+  }
   try {
     if (jobData.url) {
       const existingJob = await Job.findOne({ url: jobData.url });
@@ -38,7 +43,7 @@ async function processAndSaveJob(
         description: jobData.description,
         location: jobData.location,
         salary: jobData.salary
-      });
+      }, signal);
     }
     
     const finalJobData = {
@@ -68,12 +73,43 @@ export async function POST(request: Request) {
   const savedJobs: IJob[] = [];
   const skippedJobs: string[] = [];
   const allScrapedJobs: Partial<IJob>[] = [];
+  let tabId: string | undefined;
+  let safetyTimeout: NodeJS.Timeout | undefined;
   
   try {
-    const { source, config } = await request.json();
+    const { source, config, tabId: requestTabId } = await request.json();
+    tabId = requestTabId;
+    
+    if (!tabId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Tab ID is required'
+      }, { status: 400 });
+    }
+
+    const abortController = new AbortController();
+    const registered = registerAbortController(tabId, abortController);
+    
+    if (!registered) {
+      return NextResponse.json({
+        success: false,
+        error: 'A scraping session is already active for this tab'
+      }, { status: 409 });
+    }
+    
+    const maxScrapingTimeMs = 30 * 60 * 1000;
+    safetyTimeout = setTimeout(() => {
+      console.log(`Scraping timeout reached (${maxScrapingTimeMs}ms), aborting...`);
+      abortController.abort();
+    }, maxScrapingTimeMs);
+    
     const scrapingConfig = getScrapingConfig();
     
     await connectDB();
+    
+    if (abortController.signal.aborted) {
+      throw new Error('Operation cancelled');
+    }
     
     const ollamaAvailable = await isOllamaAvailable();
     if (!ollamaAvailable) {
@@ -83,21 +119,39 @@ export async function POST(request: Request) {
     if (source === 'startupjobs' || source === 'all') {
       console.log('Scraping StartupJobs...');
       const startupJobsConfig = config?.startupJobs || scrapingConfig.startupJobs;
-      const startupJobs = await scrapeStartupJobs(startupJobsConfig, async (jobData) => {
-        console.log(`${jobData.title}`);
-        allScrapedJobs.push(jobData);
-        await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs);
-      });
+      const startupJobs = await scrapeStartupJobs(
+        startupJobsConfig, 
+        async (jobData) => {
+          if (abortController.signal.aborted) {
+            throw new Error('Operation cancelled');
+          }
+          console.log(`${jobData.title}`);
+          allScrapedJobs.push(jobData);
+          await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs, abortController.signal);
+        },
+        abortController.signal
+      );
       console.log(`StartupJobs scraping complete: ${startupJobs.length} jobs, ${savedJobs.length} saved`);
+    }
+    
+    if (abortController.signal.aborted) {
+      throw new Error('Operation cancelled');
     }
     
     if (source === 'jobs.cz' || source === 'all') {
       console.log('Scraping Jobs.cz...');
       const jobsCzConfig = config?.jobsCz || scrapingConfig.jobsCz;
-      const jobsCzJobs = await scrapeJobsCz(jobsCzConfig, async (jobData) => {
-        allScrapedJobs.push(jobData);
-        await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs);
-      });
+      const jobsCzJobs = await scrapeJobsCz(
+        jobsCzConfig, 
+        async (jobData) => {
+          if (abortController.signal.aborted) {
+            throw new Error('Operation cancelled');
+          }
+          allScrapedJobs.push(jobData);
+          await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs, abortController.signal);
+        },
+        abortController.signal
+      );
       console.log(`Jobs.cz scraping complete: ${jobsCzJobs.length} jobs, ${savedJobs.length} saved`);
     }
     
@@ -128,16 +182,30 @@ export async function POST(request: Request) {
     });
     
   } catch (error) {
+    const isCancelled = error instanceof Error && 
+      (error.message === 'Operation cancelled' || error.name === 'AbortError');
+    
+    if (isCancelled) {
+      console.log(`Scraping cancelled by user. Saved ${savedJobs.length} jobs before cancellation.`);
+      return NextResponse.json({
+        success: false,
+        cancelled: true,
+        message: 'Scraping cancelled'
+      });
+    }
+    
     console.error(FE_ERROR_MESSAGES.SCRAPING_FAILED, error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR);
     
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR,
-      partialResults: {
-        savedJobs: savedJobs.length,
-        skippedJobs: skippedJobs.length,
-        message: `${savedJobs.length} jobs were saved before interruption`
-      }
+      error: error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR
     }, { status: 500 });
+  } finally {
+    if (tabId) {
+      unregisterAbortController(tabId);
+    }
+    if (safetyTimeout) {
+      clearTimeout(safetyTimeout);
+    }
   }
 }

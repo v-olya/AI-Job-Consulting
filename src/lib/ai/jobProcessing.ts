@@ -19,11 +19,16 @@ export interface JobProcessingResult {
 }
 
 export async function processJobWithAI(
-  jobData: JobProcessingInput
+  jobData: JobProcessingInput,
+  signal?: AbortSignal
 ): Promise<JobProcessingResult> {
   const result: JobProcessingResult = {};
 
   try {
+    if (signal?.aborted) {
+      throw new Error('Operation cancelled');
+    }
+
     const aiAnalysis = await analyzeJob({
       title: jobData.title,
       company: jobData.company,
@@ -42,6 +47,10 @@ export async function processJobWithAI(
       }
 
       if (validatedAnalysis.recommendation === 'Reagovat' || validatedAnalysis.recommendation === 'Zvážit') {
+        if (signal?.aborted) {
+          throw new Error('Operation cancelled');
+        }
+
         const companyNameForResearch = result.updatedCompanyName || jobData.company;
 
         if (companyNameForResearch && companyNameForResearch !== 'noName') {

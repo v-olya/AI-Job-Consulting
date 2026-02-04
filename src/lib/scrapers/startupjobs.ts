@@ -6,7 +6,8 @@ import { BROWSER_CONFIG, JOB_SOURCES } from '@/constants';
 
 export async function scrapeStartupJobs(
   config: StartupJobsConfig,
-  onJobScraped?: (job: Partial<IJob>) => Promise<void>
+  onJobScraped?: (job: Partial<IJob>) => Promise<void>,
+  signal?: AbortSignal
 ): Promise<Partial<IJob>[]> {
   const allJobs: Partial<IJob>[] = [];
   
@@ -15,6 +16,10 @@ export async function scrapeStartupJobs(
     let hasMorePages = true;
     
     while (hasMorePages) {
+      if (signal?.aborted) {
+        throw new Error('Operation cancelled');
+      }
+      
       await API_THROTTLER.throttle();
       
       const params = new URLSearchParams();
@@ -48,6 +53,13 @@ export async function scrapeStartupJobs(
       const url = `https://core.startupjobs.cz/api/search/offers?${params.toString()}`;
       
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort());
+        }
+        
         const response = await fetch(url, {
           headers: {
             'Accept': 'application/json',
@@ -57,8 +69,10 @@ export async function scrapeStartupJobs(
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
           },
-          signal: AbortSignal.timeout(30000)
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           if (response.status >= 400) {
@@ -120,6 +134,9 @@ export async function scrapeStartupJobs(
         
         if (onJobScraped) {
           for (const job of jobs) {
+            if (signal?.aborted) {
+              throw new Error('Operation cancelled');
+            }
             await onJobScraped(job);
           }
         }

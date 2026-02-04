@@ -14,7 +14,8 @@ import {
 
 export async function scrapeJobsCz(
   config: JobsCzConfig,
-  onJobScraped?: (job: Partial<IJob>) => Promise<void>
+  onJobScraped?: (job: Partial<IJob>) => Promise<void>,
+  signal?: AbortSignal
 ): Promise<Partial<IJob>[]> {
   const browser = await chromium.launch({ 
     headless: true,
@@ -35,6 +36,10 @@ export async function scrapeJobsCz(
     let currentPage = 1;
     
     while (true) {
+      if (signal?.aborted) {
+        throw new Error('Operation cancelled');
+      }
+      
       await SCRAPING_THROTTLER.throttle();
       
       const params = new URLSearchParams();
@@ -92,6 +97,10 @@ export async function scrapeJobsCz(
       console.log(`Page ${currentPage}: ${jobUrls.length} jobs found`);
       
       for (let i = 0; i < jobUrls.length; i++) {
+        if (signal?.aborted) {
+          throw new Error('Operation cancelled');
+        }
+        
         const jobInfo = jobUrls[i];
         try {
           await DETAIL_THROTTLER.throttle();
