@@ -217,12 +217,3 @@ export interface CachedConnection {
   conn: typeof import('mongoose') | null;
   promise: Promise<typeof import('mongoose')> | null;
 }
-
-export interface CompanyResearchResponse {
-  success: boolean;
-  data?: {
-    companyInfo: CompanyInfo;
-    summary: string;
-  };
-  error?: string;
-}
