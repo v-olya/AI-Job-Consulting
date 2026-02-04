@@ -36,11 +36,11 @@ export interface ScrapingResult {
   success: boolean;
   message?: string;
   error?: string;
+  cancelled?: boolean;
   stats?: {
     totalScraped: number;
     newJobs: number;
     skippedJobs: number;
-    dataFile: string;
   };
 }
 
