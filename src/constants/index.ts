@@ -131,11 +131,12 @@ DŮLEŽITÉ: Pokud nedokážeš z popisu pozice identifikovat název společnost
 
 `;
 
+export const SCRAPING_SESSION_CONFIG = {
+  STORAGE_KEY: 'job-scraper-session',
+} as const;
+
 export const FE_ERROR_MESSAGES = {
   UNKNOWN_ERROR: 'Unknown error',
-  DATABASE_ACCESS_DENIED: 'Database access not allowed in production',
-  DATABASE_ACCESS_DENIED_TITLE: 'Access Denied',
-  DATABASE_ACCESS_DENIED_DESCRIPTION: 'Database viewer is not available in production environment for security reasons.',
   DATABASE_LOAD_FAILED: 'Failed to load database data',
   DATABASE_ERROR_TITLE: 'Error',
   AI_PROCESSING_ERROR: 'AI processing error',

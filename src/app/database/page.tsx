@@ -6,10 +6,6 @@ import { FE_ERROR_MESSAGES } from '@/constants';
 import DatabaseClient from './DatabaseClient';
 
 async function getDatabaseData(searchParams: Record<string, string>): Promise<DatabaseData> {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED);
-  }
-
   await connectDB();
   
   const limit = parseInt(searchParams.limit || '10');
@@ -89,17 +85,6 @@ export default async function DatabaseViewer({
 }: {
   searchParams: Promise<Record<string, string>>;
 }) {
-  if (process.env.NODE_ENV === 'production') {
-    return (
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <h1 className="text-xl font-bold mb-2">{FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED_TITLE}</h1>
-          <p>{FE_ERROR_MESSAGES.DATABASE_ACCESS_DENIED_DESCRIPTION}</p>
-        </div>
-      </div>
-    );
-  }
-
   let data: DatabaseData;
   try {
     const resolvedSearchParams = await searchParams;
