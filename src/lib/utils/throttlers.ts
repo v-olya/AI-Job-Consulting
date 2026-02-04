@@ -1,7 +1,15 @@
 import { THROTTLING_CONFIG } from '@/constants';
 
-export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+export function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, ms);
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId);
+        reject(new Error('Operation cancelled'));
+      }, { once: true });
+    }
+  });
 }
 
 export class Throttler {
