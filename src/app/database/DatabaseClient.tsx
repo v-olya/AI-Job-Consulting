@@ -7,6 +7,7 @@ import { FE_ERROR_MESSAGES } from '@/constants';
 import { JobCard } from '@/components/JobCard';
 import { StatCard } from '@/components/StatCard';
 import { PaginationButton } from '@/components/buttons/PaginationButton';
+import { useAsyncOperationState } from '@/hooks/useAsyncOperationState';
 
 interface DatabaseClientProps {
   initialData: DatabaseData;
@@ -15,8 +16,16 @@ interface DatabaseClientProps {
 export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<string>();
+  const [unprocessed, setUnprocessed] = useState<number>(initialData.statistics.unprocessed);
+  
+  const {
+    tabId,
+    isOperationActive,
+    startOperation,
+    stopOperation,
+    cancelOperation
+  } = useAsyncOperationState({ operationType: 'ai-processing' });
   
   const currentSource = searchParams.get('source') || '';
   const currentProcessed = searchParams.get('processed') || '';
@@ -42,7 +51,17 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   };
 
   const handleProcessWithAI = async () => {
-    setIsProcessing(true);
+    if (isOperationActive) {
+      setProcessingResult('AI processing is already running');
+      return;
+    }
+
+    const started = startOperation('database');
+    if (!started) {
+      setProcessingResult('Failed to start AI processing session');
+      return;
+    }
+
     setProcessingResult(undefined);
     
     try {
@@ -51,23 +70,35 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ limit: 50 }),
+        body: JSON.stringify({ 
+          limit: 50,
+          tabId 
+        }),
       });
       
       const result = await response.json();
       
       if (result.success) {
         setProcessingResult(result.message);
+        setUnprocessed(initialData.statistics.unprocessed - (+result.processed));
         router.refresh();
+      } else if (result.cancelled) {
+        setProcessingResult(`Processing cancelled. ${result.processed || 0} jobs processed before cancellation.`);
       } else {
         setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${result.error}`);
       }
     } catch (error) {
       setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR}`);
     } finally {
-      setIsProcessing(false);
+      stopOperation();
     }
   };
+
+  const handleCancel = async () => {
+    await cancelOperation();
+    setProcessingResult('Processing cancelled');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="p-8">
@@ -77,7 +108,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <StatCard title="Total Jobs" value={initialData.statistics.total || 0} bgColor="bg-blue-100" />
-          <StatCard title="Processed" value={initialData.statistics.processed || 0} bgColor="bg-green-100" />
+          <StatCard title="Processed" value={(initialData.statistics.processed) || 0} bgColor="bg-green-100" />
           <StatCard title="Unprocessed" value={initialData.statistics.unprocessed || 0} bgColor="bg-orange-100" />
           <StatCard 
             title="Avg AI Score" 
@@ -97,25 +128,35 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </div>
         </div>
 
-        {initialData.statistics.unprocessed > 0 && (
+        {(unprocessed > 0 || processingResult) && (
           <div className="mb-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-xl shadow-sm">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
                   <span>⚠️</span>
-                  {initialData.statistics.unprocessed} jobs need AI processing
+                  {unprocessed} jobs need AI processing
                 </h3>
                 <p className="text-yellow-800 text-sm mt-1">
                   Run AI analysis on unprocessed jobs to get summaries, skills, and scores
                 </p>
               </div>
-              <button
-                onClick={handleProcessWithAI}
-                disabled={isProcessing}
-                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-bold text-lg"
-              >
-                {isProcessing ? '⏳ Processing...' : '🤖 Process with AI'}
-              </button>
+              <div className="flex gap-3">
+                {isOperationActive && (
+                  <button
+                    onClick={handleCancel}
+                    className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg font-bold text-lg"
+                  >
+                    ⛔ Cancel
+                  </button>
+                )}
+                <button
+                  onClick={handleProcessWithAI}
+                  disabled={isOperationActive}
+                  className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg font-bold text-lg"
+                >
+                  {isOperationActive ? '⏳ Processing...' : '🤖 Process with AI'}
+                </button>
+              </div>
             </div>
             {processingResult && (
               <div className="mt-4 p-3 bg-white rounded-lg border border-yellow-200 shadow-sm">
