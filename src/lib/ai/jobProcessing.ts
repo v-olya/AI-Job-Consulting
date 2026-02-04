@@ -41,7 +41,7 @@ export async function processJobWithAI(
         console.log(`Company name detected by AI: ${result.updatedCompanyName}`);
       }
 
-      if (validatedAnalysis.recommendation === 'Reagovat') {
+      if (validatedAnalysis.recommendation === 'Reagovat' || validatedAnalysis.recommendation === 'Zvážit') {
         const companyNameForResearch = result.updatedCompanyName || jobData.company;
 
         if (companyNameForResearch && companyNameForResearch !== 'noName') {
