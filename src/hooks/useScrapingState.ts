@@ -121,15 +121,11 @@ export function useScrapingState() {
 
   useEffect(() => {
     return () => {
-      if (isOwnSession && session) {
-        const blob = new Blob(
-          [JSON.stringify({ tabId: session.tabId })],
-          { type: 'application/json' }
-        );
-        navigator.sendBeacon('/api/cancel', blob);
+      if (isOwnSession) {
+        setSession(null);
       }
     };
-  }, [isOwnSession, session]);
+  }, [isOwnSession, setSession]);
 
   return {
     session,
