@@ -38,7 +38,7 @@ export function ScrapeResultAlert({ result, onClose }: ScrapeResultAlertProps) {
         <div className="text-sm text-gray-700">
           <p className="mb-2">{result.message}</p>
           {result.stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            <div className="grid grid-cols-3 gap-3 mt-3">
               <div className="bg-white p-2 rounded">
                 <span className="text-sm text-gray-500">Total Scraped</span>
                 <p className="font-bold text-green-700">{result.stats.totalScraped}</p>
@@ -51,30 +51,11 @@ export function ScrapeResultAlert({ result, onClose }: ScrapeResultAlertProps) {
                 <span className="text-sm text-gray-500">Skipped</span>
                 <p className="font-bold text-gray-700">{result.stats.skippedJobs}</p>
               </div>
-              <div className="bg-white p-2 rounded">
-                <span className="text-sm text-gray-500">Data File</span>
-                <p className="font-bold text-purple-700 truncate">{result.stats.dataFile}</p>
-              </div>
             </div>
           )}
         </div>
       ) : (
-        result.stats && (
-          <div className="bg-white p-3 rounded mt-3">
-            <p className="text-gray-600 text-xs mb-2">Progress Before {isCancelled ? 'Cancellation' : 'Error'}:</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-xs text-gray-500">Jobs Saved</span>
-                <p className="font-bold text-blue-700">{result.stats.newJobs}</p>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Jobs Skipped</span>
-                <p className="font-bold text-gray-700">{result.stats.skippedJobs}</p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 mt-2">{result.stats.dataFile}</p>
-          </div>
-        )
+        <p className="text-sm text-gray-700">{result.message || result.error}</p>
       )}
     </div>
   );

@@ -8,21 +8,33 @@ import { ConfigSection } from '@/components/ConfigSection';
 import { ScrapeResultAlert } from '@/components/ScrapeResultAlert';
 import { OutlineButton } from '@/components/buttons/OutlineButton';
 import { GradientButton } from '@/components/buttons/GradientButton';
+import { CancelButton } from '@/components/buttons/CancelButton';
 import { useJobCards } from '@/hooks/useJobCards';
+import { useScrapingState } from '@/hooks/useScrapingState';
 
 export default function Home() {
   const router = useRouter();
   const [config, setConfig] = useState<ScrapingConfig>();
-  const [scrapingStates, setScrapingStates] = useState<Record<string, boolean>>({
-    startupjobs: false,
-    'jobs.cz': false,
-    all: false
-  });
-  
-  const isAnyScrapingActive = Object.values(scrapingStates).some(Boolean);
   const [lastScrapeResult, setLastScrapeResult] = useState<ScrapingResult>();
   const [displayLimit, setDisplayLimit] = useState(5);
+  const [mounted, setMounted] = useState(false);
   const { topJobs, loading: loadingJobs, refetch: refetchTopJobs } = useJobCards(50);
+  
+  const {
+    isScrapingActive,
+    isOwnSession,
+    canStartScraping,
+    startScraping,
+    stopScraping,
+    cancelScraping,
+    forceStopSession,
+    session,
+    tabId
+  } = useScrapingState();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchConfig();
@@ -41,14 +53,33 @@ export default function Home() {
   };
 
   const handleScrape = async (source: string) => {
-    setScrapingStates(prev => ({ ...prev, [source]: true }));
+    if (!canStartScraping) {
+      setLastScrapeResult({
+        success: false,
+        error: 'Scraping is already running in another tab'
+      });
+      return;
+    }
+
+    const started = startScraping(source);
+    if (!started) {
+      setLastScrapeResult({
+        success: false,
+        error: 'Failed to start scraping session'
+      });
+      return;
+    }
+
     setLastScrapeResult(undefined);
     
     try {
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source })
+        body: JSON.stringify({ 
+          source,
+          tabId
+        })
       });
       
       const result = await response.json();
@@ -64,8 +95,17 @@ export default function Home() {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
-      setScrapingStates(prev => ({ ...prev, [source]: false }));
+      stopScraping();
     }
+  };
+
+  const handleCancel = async () => {
+    await cancelScraping();
+    setLastScrapeResult({
+      success: false,
+      cancelled: true,
+      message: 'Scraping cancelled'
+    });
   };
 
   return (
@@ -80,31 +120,59 @@ export default function Home() {
         
         {config && <ConfigSection config={config} />}
         
-        <div className="mb-8 flex flex-wrap gap-4">
-          <GradientButton
-            onClick={() => handleScrape('startupjobs')}
-            disabled={isAnyScrapingActive}
-            variant="blue"
-          >
-            {scrapingStates.startupjobs ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
-          </GradientButton>
-          
-          <GradientButton
-            onClick={() => handleScrape('jobs.cz')}
-            disabled={isAnyScrapingActive}
-            variant="green"
-          >
-            {scrapingStates['jobs.cz'] ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
-          </GradientButton>
-          
-          <GradientButton
-            onClick={() => handleScrape('all')}
-            disabled={isAnyScrapingActive}
-            variant="purple"
-          >
-            {scrapingStates.all ? '⏳ Scraping...' : '⚡ Scrape All'}
-          </GradientButton>
-        </div>
+        {!mounted ? (
+          <div className="mb-8 flex flex-wrap gap-4">
+            <div className="px-6 py-3 bg-gray-200 rounded-lg w-48 h-12 animate-pulse" />
+            <div className="px-6 py-3 bg-gray-200 rounded-lg w-48 h-12 animate-pulse" />
+            <div className="px-6 py-3 bg-gray-200 rounded-lg w-48 h-12 animate-pulse" />
+          </div>
+        ) : (
+          <div className="mb-8 flex flex-wrap gap-4">
+            {isOwnSession ? (
+              <CancelButton onClick={handleCancel} />
+            ) : (
+              <>
+                <GradientButton
+                  onClick={() => handleScrape('startupjobs')}
+                  disabled={isScrapingActive}
+                  variant="blue"
+                >
+                  {isScrapingActive && session?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+                </GradientButton>
+                
+                <GradientButton
+                  onClick={() => handleScrape('jobs.cz')}
+                  disabled={isScrapingActive}
+                  variant="green"
+                >
+                  {isScrapingActive && session?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+                </GradientButton>
+                
+                <GradientButton
+                  onClick={() => handleScrape('all')}
+                  disabled={isScrapingActive}
+                  variant="purple"
+                >
+                  {isScrapingActive && session?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
+                </GradientButton>
+              </>
+            )}
+          </div>
+        )}
+        
+        {mounted && isScrapingActive && !isOwnSession && (
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+            <p className="text-yellow-800 text-sm">
+              ⚠️ Scraping is currently running in another tab
+            </p>
+            <button
+              onClick={forceStopSession}
+              className="px-3 py-1 text-sm bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors"
+            >
+              Force Stop
+            </button>
+          </div>
+        )}
 
         {lastScrapeResult && (
           <ScrapeResultAlert 
@@ -128,7 +196,7 @@ export default function Home() {
 
           {loadingJobs ? (
             <div className="text-center py-16">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
               <p className="text-gray-500 mt-4">Loading top jobs...</p>
             </div>
           ) : topJobs.length > 0 ? (
