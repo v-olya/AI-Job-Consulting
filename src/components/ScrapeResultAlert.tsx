@@ -6,10 +6,15 @@ interface ScrapeResultAlertProps {
 }
 
 export function ScrapeResultAlert({ result, onClose }: ScrapeResultAlertProps) {
+  const isSuccess = result.success;
+  const isCancelled = result.cancelled;
+  
   return (
     <div className={`mb-6 p-4 rounded-lg shadow-sm relative ${
-      result.success 
+      isSuccess 
         ? 'bg-green-50 border-l-4 border-green-500' 
+        : isCancelled
+        ? 'bg-yellow-50 border-l-4 border-yellow-500'
         : 'bg-red-50 border-l-4 border-red-500'
     }`}>
       <button
@@ -23,10 +28,13 @@ export function ScrapeResultAlert({ result, onClose }: ScrapeResultAlertProps) {
       </button>
       
       <h3 className="font-semibold mb-2 flex items-center gap-2 pr-8">
-        <span className="text-xl">{result.success ? '✅' : '❌'}</span>
-        {result.success ? 'Scraping Complete' : 'Scraping Failed'}
+        <span className="text-xl">
+          {isSuccess ? '✅' : isCancelled ? '⏹️' : '❌'}
+        </span>
+        {isSuccess ? 'Scraping Complete' : isCancelled ? 'Scraping Cancelled' : 'Scraping Failed'}
       </h3>
-      {result.success ? (
+      
+      {isSuccess ? (
         <div className="text-sm text-gray-700">
           <p className="mb-2">{result.message}</p>
           {result.stats && (
@@ -51,7 +59,22 @@ export function ScrapeResultAlert({ result, onClose }: ScrapeResultAlertProps) {
           )}
         </div>
       ) : (
-        <p className="text-red-700 text-sm pr-8">{result.error}</p>
+        result.stats && (
+          <div className="bg-white p-3 rounded mt-3">
+            <p className="text-gray-600 text-xs mb-2">Progress Before {isCancelled ? 'Cancellation' : 'Error'}:</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="text-xs text-gray-500">Jobs Saved</span>
+                <p className="font-bold text-blue-700">{result.stats.newJobs}</p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">Jobs Skipped</span>
+                <p className="font-bold text-gray-700">{result.stats.skippedJobs}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">{result.stats.dataFile}</p>
+          </div>
+        )
       )}
     </div>
   );

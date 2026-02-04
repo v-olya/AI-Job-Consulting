@@ -43,8 +43,8 @@ export function JobCard({ job }: JobCardProps) {
       
       {job.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
-          {job.tags.map((tag, idx) => (
-            <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+          {job.tags.map((tag) => (
+            <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
               {tag}
             </span>
           ))}
@@ -97,8 +97,8 @@ export function JobCard({ job }: JobCardProps) {
             {job.companyResearch.keyFacts?.length > 0 && (
               <div className="text-sm text-gray-700">
                 <ul className="list-disc list-inside space-y-1 mt-1">
-                  {job.companyResearch.keyFacts.map((fact, index) => (
-                    <li key={index} className="leading-relaxed">{fact.trim()}</li>
+                  {job.companyResearch.keyFacts.map((fact) => (
+                    <li key={fact} className="leading-relaxed">{fact.trim()}</li>
                   ))}
                 </ul>
               </div>
