@@ -9,7 +9,7 @@ export const DATABASE_CONFIG = {
 
 export const OLLAMA_CONFIG = {
   DEFAULT_HOST: 'http://localhost:11434',
-  DEFAULT_MODEL: 'qwen3-vl:235b-cloud',
+  DEFAULT_MODEL: 'gpt-oss:20b',
   TIMEOUT: {
     REQUEST: 180000, // 3 minutes
     HEADERS: 30000,  // 30 seconds for headers
@@ -130,10 +130,6 @@ DŮLEŽITÉ: Pokud nedokážeš z popisu pozice identifikovat název společnost
 - Doporučuj „Reagovat“ jen tehdy, pokud ti to dává smysl
 
 `;
-
-export const SCRAPING_SESSION_CONFIG = {
-  STORAGE_KEY: 'job-scraper-session',
-} as const;
 
 export const FE_ERROR_MESSAGES = {
   UNKNOWN_ERROR: 'Unknown error',
