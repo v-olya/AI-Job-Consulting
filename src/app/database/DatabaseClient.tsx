@@ -125,8 +125,9 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </div>
         )}
 
-        <div className="flex gap-4 mb-8 flex-wrap">
+        <div className="flex gap-4 mb-8 flex-wrap justify-center">
           <select 
+            name="sourceSelect"
             value={currentSource} 
             onChange={(e) => updateFilters({ source: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
@@ -137,6 +138,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </select>
           
           <select 
+            name="statusSelect"
             value={currentProcessed} 
             onChange={(e) => updateFilters({ processed: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
@@ -147,6 +149,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </select>
           
           <select 
+            name="perPageSelect"
             value={currentLimit} 
             onChange={(e) => updateFilters({ limit: parseInt(e.target.value) })}
             className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
@@ -157,15 +160,15 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </select>
         </div>
 
-        <div className="flex gap-3 mb-8 items-center">
+        <div className="flex gap-3 mb-8 justify-center items-center">
           <PaginationButton 
             onClick={() => updateFilters({ skip: Math.max(0, currentSkip - currentLimit) })}
             disabled={currentSkip === 0}
           >
             ← Previous
           </PaginationButton>
-          <span className="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 font-bold text-gray-700">
-            Showing {currentSkip + 1}-{Math.min(currentSkip + currentLimit, initialData.pagination.total)} of {initialData.pagination.total}
+          <span>
+            &nbsp;{currentSkip + 1}&thinsp;-&thinsp;{Math.min(currentSkip + currentLimit, initialData.pagination.total)}&nbsp; of &nbsp;{initialData.pagination.total}&nbsp;
           </span>
           <PaginationButton 
             onClick={() => updateFilters({ skip: currentSkip + currentLimit })}
