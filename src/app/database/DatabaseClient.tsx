@@ -51,10 +51,6 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   };
 
   const handleProcessWithAI = async () => {
-    if (isOperationActive) {
-      setProcessingResult('AI processing is already running');
-      return;
-    }
 
     const started = startOperation('database');
     if (!started) {
@@ -79,11 +75,13 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
       const result = await response.json();
       
       if (result.success) {
-        setProcessingResult(result.message);
-        setUnprocessed(initialData.statistics.unprocessed - (+result.processed));
         router.refresh();
+        setProcessingResult(result.message);
       } else if (result.cancelled) {
         setProcessingResult(`Processing cancelled. ${result.processed || 0} jobs processed before cancellation.`);
+        if (!isNaN(+result.processed)) {
+          setUnprocessed((prev)=> prev - (+result.processed));
+        }
       } else {
         setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${result.error}`);
       }
@@ -92,11 +90,6 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
     } finally {
       stopOperation();
     }
-  };
-
-  const handleCancel = async () => {
-    await cancelOperation();
-    setProcessingResult('Processing cancelled');
   };
 
   return (
@@ -143,7 +136,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
               <div className="flex gap-3">
                 {isOperationActive && (
                   <button
-                    onClick={handleCancel}
+                    onClick={cancelOperation}
                     className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg font-bold text-lg"
                   >
                     ⛔ Cancel
