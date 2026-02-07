@@ -115,8 +115,6 @@ export function useAsyncOperationState(options: UseAsyncOperationStateOptions) {
   }, [setSession]);
 
   const cancelOperation = useCallback(async (): Promise<void> => {
-    if (!isOperationActive) return;
-
     try {
       await fetch('/api/cancel', {
         method: 'POST',
@@ -128,7 +126,7 @@ export function useAsyncOperationState(options: UseAsyncOperationStateOptions) {
     }
 
     stopOperation();
-  }, [operationType, tabId, stopOperation, isOperationActive]);
+  }, [operationType, tabId, stopOperation]);
 
 
   return {
