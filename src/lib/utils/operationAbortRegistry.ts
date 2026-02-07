@@ -1,17 +1,11 @@
 export type OperationType = 'scraping' | 'ai-processing';
 
-const MAX_ACTIVE_CONTROLLERS = 20;
-
 interface OperationEntry {
   controller: AbortController;
   cleanup: () => void;
 }
 
-const activeControllers = new Map<string, OperationEntry>();
-
-function getControllerKey(tabId: string, type: OperationType): string {
-  return `${tabId}:${type}`;
-}
+const activeControllers = new Map<OperationType, OperationEntry>();
 
 export interface RegisteredOperation {
   ok: true;
@@ -28,7 +22,6 @@ export type RegisterOperationResult = RegisteredOperation | RejectedOperation;
 
 export async function withRegisteredOperation<T>(
   options: {
-    tabId: string;
     type: OperationType;
     timeoutMs: number;
     onTimeout?: () => void;
@@ -49,27 +42,14 @@ export async function withRegisteredOperation<T>(
 }
 
 export function registerOperation(options: {
-  tabId: string;
   type: OperationType;
   timeoutMs: number;
   onTimeout?: () => void;
 }): RegisterOperationResult {
-  const { tabId, type, timeoutMs, onTimeout } = options;
+  const { type, timeoutMs, onTimeout } = options;
 
-  const key = getControllerKey(tabId, type);
-  if (activeControllers.has(key)) {
+  if (activeControllers.has(type)) {
     return { ok: false };
-  }
-
-  if (activeControllers.size >= MAX_ACTIVE_CONTROLLERS) {
-    const oldestKey = activeControllers.keys().next().value as string | undefined;
-    if (oldestKey) {
-      const oldestEntry = activeControllers.get(oldestKey);
-      if (oldestEntry) {
-        oldestEntry.controller.abort();
-        oldestEntry.cleanup();
-      }
-    }
   }
 
   const controller = new AbortController();
@@ -81,7 +61,7 @@ export function registerOperation(options: {
     cleanedUp = true;
 
     clearTimeout(timeoutId);
-    activeControllers.delete(key);
+    activeControllers.delete(type);
   };
 
   const timeoutId = setTimeout(() => {
@@ -90,7 +70,7 @@ export function registerOperation(options: {
     cleanup();
   }, timeoutMs);
 
-  activeControllers.set(key, { controller, cleanup });
+  activeControllers.set(type, { controller, cleanup });
 
   return {
     ok: true,
@@ -100,9 +80,8 @@ export function registerOperation(options: {
   };
 }
 
-export function abortOperation(tabId: string, type: OperationType): boolean {
-  const key = getControllerKey(tabId, type);
-  const entry = activeControllers.get(key);
+export function abortOperation(type: OperationType): boolean {
+  const entry = activeControllers.get(type);
   if (!entry) return false;
 
   entry.controller.abort();

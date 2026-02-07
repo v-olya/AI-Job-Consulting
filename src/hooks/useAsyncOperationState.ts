@@ -1,139 +1,115 @@
-import { useLocalStorage } from 'usehooks-ts';
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 
 export type OperationType = 'scraping' | 'ai-processing';
 
 export interface AsyncOperationSession {
   type: OperationType;
   source?: string;
-  startedAt: number;
-  lastHeartbeat: number;
-  tabId: string;
-}
-
-const STORAGE_KEY_PREFIX = 'async-operation-session:';
-const TAB_ID_STORAGE_KEY = 'async-operation-tab-id';
-const SESSION_TIMEOUT_MS = 2 * 60 * 1000;
-const HEARTBEAT_INTERVAL_MS = 5000;
-
-function generateTabId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-function getOrCreateTabId(): string {
-  if (typeof window === 'undefined') {
-    return generateTabId();
-  }
-
-  try {
-    const existing = window.sessionStorage.getItem(TAB_ID_STORAGE_KEY);
-    if (existing) {
-      return existing;
-    }
-
-    const created = generateTabId();
-    window.sessionStorage.setItem(TAB_ID_STORAGE_KEY, created);
-    return created;
-  } catch {
-    return generateTabId();
-  }
 }
 
 export interface UseAsyncOperationStateOptions {
   operationType: OperationType;
 }
 
+const CHANNEL_NAME = 'job-operations-sync';
+
+interface BroadcastMessage {
+  type: 'START' | 'STOP' | 'REQUEST_STATE';
+  operationType: OperationType;
+  source?: string;
+}
+
 export function useAsyncOperationState(options: UseAsyncOperationStateOptions) {
   const { operationType } = options;
-  const storageKey = `${STORAGE_KEY_PREFIX}${operationType}`;
-
-  const [session, setSession] = useLocalStorage<AsyncOperationSession | null>(storageKey, null, {
-    initializeWithValue: false,
-  });
-  const [tabId] = useState(getOrCreateTabId);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const stalenessCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    stalenessCheckIntervalRef.current = setInterval(() => {
-      if (session) {
-        const timeSinceHeartbeat = Date.now() - session.lastHeartbeat;
-        if (timeSinceHeartbeat > SESSION_TIMEOUT_MS) {
-          setSession(null);
-        }
-      }
-    }, 1000);
-
-    return () => {
-      if (stalenessCheckIntervalRef.current) {
-        clearInterval(stalenessCheckIntervalRef.current);
-      }
-    };
-  }, [session, setSession]);
-
-  useEffect(() => {
-    if (session && session.tabId === tabId) {
-      heartbeatIntervalRef.current = setInterval(() => {
-        setSession(prev => prev ? { ...prev, lastHeartbeat: Date.now() } : null);
-      }, HEARTBEAT_INTERVAL_MS);
-    } else {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-      }
-    };
-  }, [session, tabId, setSession]);
-
+  const [session, setSession] = useState<AsyncOperationSession | null>(null);
   const isOperationActive = session !== null;
-  const isSameType = useMemo(() => session?.type === operationType, [session, operationType]);
+  const isOperationActiveRef = useRef(false);
+
+  useEffect(() => {
+    isOperationActiveRef.current = isOperationActive;
+  }, [isOperationActive]);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel(CHANNEL_NAME);
+
+    const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
+      const { type, operationType: msgOperationType, source } = event.data;
+
+      if (msgOperationType !== operationType) return;
+
+      if (type === 'START') {
+        setSession({ type: operationType, source });
+      }
+      if (type === 'STOP') {
+        setSession(null);
+      }
+      if (type === 'REQUEST_STATE' && isOperationActiveRef.current && session) {
+        channel.postMessage({ 
+          type: 'START', 
+          operationType, 
+          source: session.source 
+        });
+      }
+    };
+
+    channel.addEventListener('message', handleMessage);
+
+    channel.postMessage({ type: 'REQUEST_STATE', operationType });
+
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+    };
+  }, [operationType, session]);
 
   const startOperation = useCallback((source?: string): boolean => {
     if (isOperationActive) {
       return false;
     }
 
-    const now = Date.now();
-    setSession({
-      type: operationType,
-      source,
-      startedAt: now,
-      lastHeartbeat: now,
-      tabId
-    });
+    const newSession = { type: operationType, source };
+    setSession(newSession);
+
+    try {
+      const channel = new BroadcastChannel(CHANNEL_NAME);
+      channel.postMessage({ type: 'START', operationType, source });
+      channel.close();
+    } catch (error) {
+      console.error('Failed to broadcast start operation:', error);
+    }
 
     return true;
-  }, [operationType, tabId, setSession, isOperationActive]);
+  }, [operationType, isOperationActive]);
 
   const stopOperation = useCallback((): void => {
-      setSession(null);
-  }, [setSession]);
+    setSession(null);
+
+    try {
+      const channel = new BroadcastChannel(CHANNEL_NAME);
+      channel.postMessage({ type: 'STOP', operationType });
+      channel.close();
+    } catch (error) {
+      console.error('Failed to broadcast stop operation:', error);
+    }
+  }, [operationType]);
 
   const cancelOperation = useCallback(async (): Promise<void> => {
     try {
       await fetch('/api/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tabId, type: operationType })
+        body: JSON.stringify({ type: operationType })
       });
     } catch (error) {
       console.error(`Failed to cancel ${operationType}:`, error);
     }
 
     stopOperation();
-  }, [operationType, tabId, stopOperation]);
-
+  }, [operationType, stopOperation]);
 
   return {
     session,
-    tabId,
     isOperationActive,
-    isSameType,
     startOperation,
     stopOperation,
     cancelOperation

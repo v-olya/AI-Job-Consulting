@@ -25,8 +25,7 @@ export default function Home() {
     startOperation,
     stopOperation,
     cancelOperation,
-    session,
-    tabId
+    session
   } = useAsyncOperationState({ operationType: 'scraping' });
 
   useEffect(() => {
@@ -74,8 +73,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          source,
-          tabId
+          source
         })
       });
       

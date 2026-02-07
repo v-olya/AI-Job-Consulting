@@ -81,11 +81,11 @@ AI-powered job scraping and analysis tool. Scrapes listings from StartupJobs.cz 
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `POST /api/scrape` | POST | Start scraping. Body: `{ source: 'startupjobs' \| 'jobs.cz' \| 'all', tabId: string }` |
-| `POST /api/process-ai` | POST | AI-process unprocessed jobs. Body: `{ limit?: number, tabId: string }` |
+| `POST /api/scrape` | POST | Start scraping. Body: `{ source: 'startupjobs' \| 'jobs.cz' \| 'all' }` |
+| `POST /api/process-ai` | POST | AI-process unprocessed jobs. Body: `{ limit?: number }` |
 | `GET /api/jobs` | GET | List jobs with filters: `?source=&processed=&limit=&skip=` |
 | `GET /api/config` | GET | Current scraping configuration with field descriptions |
-| `POST /api/cancel` | POST | Cancel running operation. Body: `{ tabId: string, type?: 'scraping' \| 'ai-processing' }` |
+| `POST /api/cancel` | POST | Cancel running operation. Body: `{ type?: 'scraping' \| 'ai-processing' }` |
 
 All long-running endpoints support cancellation via `AbortSignal` and return stats on completion/cancellation.
 
@@ -93,10 +93,11 @@ All long-running endpoints support cancellation via `AbortSignal` and return sta
 
 The application prevents conflicting operations across multiple browser tabs:
 
-- **Session Management**: Each tab generates a unique `tabId` and shares operation state via localStorage
-- **Heartbeat System**: Active tabs send heartbeats every 5 seconds; stale sessions auto-expire after 2 minutes
-- **Cross-Tab Communication**: When an operation starts in one tab, other tabs show the running state and offer "Force Stop" option
-- **Automatic Cleanup**: When a tab closes, its session is automatically cleaned up
+- **Operation State**: Each tab maintains its own local operation state via React state (`isOperationActive`)
+- **Server-Side Registration**: Long-running operations register with the server using operation type ('scraping' or 'ai-processing')
+- **Global Operation Lock**: Only one operation of each type can run server-side at a time (tracked in `operationAbortRegistry.ts`)
+- **Cancellation**: Any tab can cancel a running operation by hitting `/api/cancel` with the operation type
+- **Broadcast Channels**: (Coming soon) Will enable real-time cross-tab communication for operation state synchronization
 
 **NB!** Cancellation endpoint only works within the same server instance. It stores abort controllers in a module-level Map.
 If you deploy to a serverless/multi-instance environment, tab A might start /api/process-ai on instance #1, and tab B might send /api/cancel to instance #2 → no controller found, /cancel does not abort anything.

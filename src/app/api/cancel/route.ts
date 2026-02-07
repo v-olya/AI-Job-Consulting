@@ -3,17 +3,10 @@ import { abortOperation, type OperationType } from '@/lib/utils/operationAbortRe
 
 export async function POST(request: Request) {
   try {
-    const { tabId, type } = await request.json();
-
-    if (!tabId) {
-      return NextResponse.json(
-        { success: false, error: 'Tab ID is required' },
-        { status: 400 }
-      );
-    }
+    const { type } = await request.json();
 
     const operationType: OperationType = type || 'scraping';
-    const didAbort = abortOperation(tabId, operationType);
+    const didAbort = abortOperation(operationType);
 
     if (didAbort) {
       return NextResponse.json({

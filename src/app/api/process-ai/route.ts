@@ -8,27 +8,17 @@ import { withRegisteredOperation, type OperationType } from '@/lib/utils/operati
 const AI_PROCESSING_OPERATION_TYPE: OperationType = 'ai-processing';
 
 export async function POST(request: Request) {
-  let tabId: string | undefined;
   let processedCount = 0;
   let failedCount = 0;
   let companyResearchCount = 0;
   
   try {
-    const { limit = 50, tabId: requestTabId } = await request.json();
-    tabId = requestTabId;
-    
-    if (!tabId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Tab ID is required'
-      }, { status: 400 });
-    }
+    const { limit = 50 } = await request.json();
 
     const maxProcessingTimeMs = 30 * 60 * 1000;
 
     const operation = await withRegisteredOperation(
       {
-        tabId,
         type: AI_PROCESSING_OPERATION_TYPE,
         timeoutMs: maxProcessingTimeMs,
         onTimeout: () => {

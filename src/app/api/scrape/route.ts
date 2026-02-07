@@ -74,24 +74,14 @@ export async function POST(request: Request) {
   const savedJobs: IJob[] = [];
   const skippedJobs: string[] = [];
   const allScrapedJobs: Partial<IJob>[] = [];
-  let tabId: string | undefined;
   
   try {
-    const { source, config, tabId: requestTabId } = await request.json();
-    tabId = requestTabId;
-    
-    if (!tabId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Tab ID is required'
-      }, { status: 400 });
-    }
+    const { source, config } = await request.json();
 
     const maxScrapingTimeMs = 30 * 60 * 1000;
 
     const operation = await withRegisteredOperation(
       {
-        tabId,
         type: SCRAPING_OPERATION_TYPE,
         timeoutMs: maxScrapingTimeMs,
         onTimeout: () => {

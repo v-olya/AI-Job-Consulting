@@ -20,7 +20,6 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   const [unprocessed, setUnprocessed] = useState<number>(initialData.statistics.unprocessed);
   
   const {
-    tabId,
     isOperationActive,
     startOperation,
     stopOperation,
@@ -67,8 +66,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          limit: 50,
-          tabId 
+          limit: 50
         }),
       });
       

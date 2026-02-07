@@ -137,6 +137,8 @@ export const FE_ERROR_MESSAGES = {
   DATABASE_ERROR_TITLE: 'Error',
   AI_PROCESSING_ERROR: 'AI processing error',
   AI_ANALYSIS_FAILED: 'AI analysis failed for',
+  AI_START_FAILED: 'Failed to start AI processing',
+  AI_PROCESSING_CANCELLED: 'AI processing cancelled',
   JOB_SAVE_FAILED: 'Failed to save',
   OLLAMA_NOT_AVAILABLE: 'Ollama not available - jobs will be saved without AI analysis',
   NO_JOBS_FOUND: 'No jobs found to scrape',
