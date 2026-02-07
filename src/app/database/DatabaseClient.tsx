@@ -54,7 +54,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
 
     const started = startOperation('database');
     if (!started) {
-      setProcessingResult('Failed to start AI processing session');
+      setProcessingResult(`${FE_ERROR_MESSAGES.AI_START_FAILED}.`);
       return;
     }
 
@@ -78,17 +78,16 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         router.refresh();
         setProcessingResult(result.message);
       } else if (result.cancelled) {
-        setProcessingResult(`Processing cancelled. ${result.processed || 0} jobs processed before cancellation.`);
+        setProcessingResult(`${FE_ERROR_MESSAGES.AI_PROCESSING_CANCELLED}. ${result.processed || 0} jobs processed before cancellation.`);
         if (!isNaN(+result.processed)) {
           setUnprocessed((prev)=> prev - (+result.processed));
         }
       } else {
-        setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${result.error}`);
+        setProcessingResult(`Error: ${result.error}`);
       }
-    } catch (error) {
-      setProcessingResult(`${FE_ERROR_MESSAGES.PROCESSING_ERROR_PREFIX} ${error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR}`);
     } finally {
       stopOperation();
+      setProcessingResult(FE_ERROR_MESSAGES.AI_PROCESSING_ERROR);
     }
   };
 
