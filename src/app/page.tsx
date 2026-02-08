@@ -50,10 +50,6 @@ export default function Home() {
 
   const handleScrape = async (source: string) => {
     if (isOperationActive) {
-      setLastScrapeResult({
-        success: false,
-        error: 'Scraping is already running in another tab'
-      });
       return;
     }
 
