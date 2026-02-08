@@ -70,6 +70,13 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         }),
       });
       
+      // Handle race condition: server rejected because operation already running
+      if (response.status === 409) {
+        stopOperation(); // Revert optimistic local state
+        setProcessingResult(`${FE_ERROR_MESSAGES.AI_START_FAILED}. Operation already running.`);
+        return;
+      }
+      
       const result = await response.json();
       
       if (result.success) {
@@ -83,9 +90,11 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
       } else {
         setProcessingResult(`Error: ${result.error}`);
       }
+    } catch (error) {
+      console.error('AI processing error:', error);
+      setProcessingResult(FE_ERROR_MESSAGES.AI_PROCESSING_ERROR);
     } finally {
       stopOperation();
-      setProcessingResult(FE_ERROR_MESSAGES.AI_PROCESSING_ERROR);
     }
   };
 

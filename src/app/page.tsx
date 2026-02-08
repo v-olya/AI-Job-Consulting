@@ -25,7 +25,7 @@ export default function Home() {
     startOperation,
     stopOperation,
     cancelOperation,
-    session
+    activeOperation
   } = useAsyncOperationState({ operationType: 'scraping' });
 
   useEffect(() => {
@@ -76,6 +76,16 @@ export default function Home() {
           source
         })
       });
+      
+      // Handle race condition: server rejected because operation already running
+      if (response.status === 409) {
+        stopOperation(); // Revert optimistic local state
+        setLastScrapeResult({
+          success: false,
+          error: 'Scraping is already running in another tab'
+        });
+        return;
+      }
       
       const result = await response.json();
       setLastScrapeResult(result);
@@ -132,7 +142,7 @@ export default function Home() {
                   disabled={isOperationActive}
                   variant="blue"
                 >
-                  {isOperationActive && session?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+                  {isOperationActive && activeOperation?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
                 </GradientButton>
                 
                 <GradientButton
@@ -140,7 +150,7 @@ export default function Home() {
                   disabled={isOperationActive}
                   variant="green"
                 >
-                  {isOperationActive && session?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+                  {isOperationActive && activeOperation?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
                 </GradientButton>
                 
                 <GradientButton
@@ -148,7 +158,7 @@ export default function Home() {
                   disabled={isOperationActive}
                   variant="purple"
                 >
-                  {isOperationActive && session?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
+                  {isOperationActive && activeOperation?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
                 </GradientButton>
               </>
             )}
