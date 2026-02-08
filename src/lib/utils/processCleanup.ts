@@ -2,8 +2,6 @@ import { abortOperation } from './operationAbortRegistry';
 import mongoose from 'mongoose';
 
 function cleanupAllControllers() {
-  console.log('Cleaning up all active controllers...');
-  
   // Cleanup scraping controllers
   if (abortOperation('scraping')) {
     console.log('Scraping controller cleaned up');
@@ -13,13 +11,10 @@ function cleanupAllControllers() {
   if (abortOperation('ai-processing')) {
     console.log('AI processing controller cleaned up');
   }
-  
-  console.log('All controllers cleaned up successfully');
 }
 
 function cleanupDatabase() {
   if (mongoose.connection.readyState === 1) {
-    console.log('Closing database connection...');
     mongoose.connection.close();
     console.log('Database connection closed');
   }
