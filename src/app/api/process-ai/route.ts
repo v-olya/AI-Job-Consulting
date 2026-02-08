@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     const { limit = 50 } = await request.json();
 
-    const maxProcessingTimeMs = 30 * 60 * 1000;
+    const maxProcessingTimeMs = 60 * 60 * 1000;
 
     const operation = await withRegisteredOperation(
       {
