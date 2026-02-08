@@ -1,7 +1,9 @@
 import { OperationType } from '@/lib/utils/operationAbortRegistry';
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 
-interface AsyncOperationSession {
+const isBrowser = typeof window !== 'undefined';
+
+interface ActiveOperation {
   type: OperationType;
   source?: string;
 }
@@ -9,7 +11,7 @@ interface AsyncOperationSession {
 const CHANNEL_NAME = 'job-operations-sync';
 
 interface BroadcastMessage {
-  type: 'START' | 'STOP' | 'REQUEST_STATE';
+  type: 'START' | 'STOP';
   operationType: OperationType;
   source?: string;
 }
@@ -18,15 +20,12 @@ export function useAsyncOperationState(options: {
   operationType: OperationType;
 }) {
   const { operationType } = options;
-  const [session, setSession] = useState<AsyncOperationSession | null>(null);
-  const isOperationActive = session !== null;
-  const isOperationActiveRef = useRef(false);
+  const [activeOperation, setActiveOperation] = useState<ActiveOperation | null>(null);
+  const isOperationActive = activeOperation !== null;
 
   useEffect(() => {
-    isOperationActiveRef.current = isOperationActive;
-  }, [isOperationActive]);
+    if (!isBrowser) return;
 
-  useEffect(() => {
     const channel = new BroadcastChannel(CHANNEL_NAME);
 
     const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
@@ -35,42 +34,56 @@ export function useAsyncOperationState(options: {
       if (msgOperationType !== operationType) return;
 
       if (type === 'START') {
-        setSession({ type: operationType, source });
+        setActiveOperation({ type: operationType, source });
       }
       if (type === 'STOP') {
-        setSession(null);
-      }
-      if (type === 'REQUEST_STATE' && isOperationActiveRef.current && session) {
-        channel.postMessage({ 
-          type: 'START', 
-          operationType, 
-          source: session.source 
-        });
+        setActiveOperation(null);
       }
     };
 
     channel.addEventListener('message', handleMessage);
 
-    channel.postMessage({ type: 'REQUEST_STATE', operationType });
+    // Query server for operation state on mount
+    const checkServerState = async () => {
+      try {
+        const response = await fetch(`/api/operation-status?type=${operationType}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (result.success && result.isActive) {
+          setActiveOperation({ type: operationType });
+        }
+      } catch (error) {
+        console.error('Failed to check server operation state:', error);
+      }
+    };
+
+    checkServerState();
 
     return () => {
       channel.removeEventListener('message', handleMessage);
       channel.close();
     };
-  }, [operationType, session]);
+  }, [operationType]);
 
+  // Check server before committing to local state to prevent race conditions
   const startOperation = useCallback((source?: string): boolean => {
+    // Quick local check first (optimization)
     if (isOperationActive) {
       return false;
     }
 
-    const newSession = { type: operationType, source };
-    setSession(newSession);
+    // Optimistically set local state and broadcast
+    // If server rejects (409), caller should call stopOperation() to revert
+    setActiveOperation({ type: operationType, source });
 
     try {
-      const channel = new BroadcastChannel(CHANNEL_NAME);
-      channel.postMessage({ type: 'START', operationType, source });
-      channel.close();
+      if (isBrowser) {
+        const channel = new BroadcastChannel(CHANNEL_NAME);
+        channel.postMessage({ type: 'START', operationType, source });
+        channel.close();
+      }
     } catch (error) {
       console.error('Failed to broadcast start operation:', error);
     }
@@ -79,12 +92,14 @@ export function useAsyncOperationState(options: {
   }, [operationType, isOperationActive]);
 
   const stopOperation = useCallback((): void => {
-    setSession(null);
+    setActiveOperation(null);
 
     try {
-      const channel = new BroadcastChannel(CHANNEL_NAME);
-      channel.postMessage({ type: 'STOP', operationType });
-      channel.close();
+      if (isBrowser) {
+        const channel = new BroadcastChannel(CHANNEL_NAME);
+        channel.postMessage({ type: 'STOP', operationType });
+        channel.close();
+      }
     } catch (error) {
       console.error('Failed to broadcast stop operation:', error);
     }
@@ -105,7 +120,7 @@ export function useAsyncOperationState(options: {
   }, [operationType, stopOperation]);
 
   return {
-    session,
+    activeOperation,
     isOperationActive,
     startOperation,
     stopOperation,
