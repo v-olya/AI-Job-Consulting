@@ -23,31 +23,42 @@ AI-powered job scraping and analysis tool. Scrapes listings from StartupJobs.cz 
 | **StartupJobs.cz** | Core API | Uses JSON API — fast, no browser automation needed |
 | **Jobs.cz** | Playwright | Headless browser scraping with throttling and retry logic |
 
-## Setup
+## Mock API Server
 
-1. **Install dependencies**:
+This project includes a mock API server for development and testing purposes. It intercepts external API calls to `startupjobs.cz` and returns realistic mock data.
 
-   ```bash
-   npm install
-   ```
+### Features
 
-2. **Configure environment**:
+- **Network-level interception**: Uses MSW (Mock Service Worker) to intercept requests at the node network level.
+- **Realistic mock data**: Returns structured job listings that mirror real API responses.
+- **Zero code changes**: App code remains unchanged - mocking happens transparently.
 
-   ```bash
-   MONGODB_URI=mongodb://localhost:27017/job-scraper  # MongoDB connection
-   OLLAMA_HOST=http://localhost:11434                # Local Ollama server
-   OLLAMA_API_KEY=your-key                           # Ollama requires auth for web search
-   ```
+### Usage
 
-3. **Configure scraping filters**:
-    Edit `src/configureFilters.ts` to set domain-specific scraping filters
+#### 1. Start with Mock Mode
 
-4. **Start Ollama** (required for AI analysis):
+```bash
+npm run dev:mock
+```
 
-   ```bash
-   ollama serve
-   ollama run your-local-model
-   ```
+This starts the development server with `MOCK_MODE=true` environment variable.
+
+#### 2. How it works
+
+When `MOCK_MODE=true` is set:
+1. `src/instrumentation.ts` initializes the MSW server using `mocks/node.ts`.
+2. Accessing `startupjobs` endpoints will return mocked data defined in `mocks/handlers.ts`.
+3. The `jobs.cz` scraper switches to a mock implementation (`mocks/mockScrapers.ts`) in `src/app/api/scrape/route.ts`.
+
+#### 3. Mock Data Structure
+
+The mock server returns realistic job listings. You can see the structure in `mocks/handlers.ts` (for StartupJobs) and `mocks/mockScrapers.ts` (for Jobs.cz).
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MOCK_MODE` | `false` | Enable mock mode globally to intercept requests and use mock scrapers |
 
 5. **Run development server**:
 

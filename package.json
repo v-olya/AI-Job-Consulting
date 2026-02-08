@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mock": "set MOCK_MODE=true&& next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
@@ -36,6 +37,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "knip": "^5.83.1",
+    "msw": "^2.12.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

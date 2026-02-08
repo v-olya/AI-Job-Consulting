@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/utils/database';
 import { Job, IJob } from '@/schemas/Job';
 import { scrapeStartupJobs } from '@/lib/scrapers/startupjobs';
 import { scrapeJobsCz } from '@/lib/scrapers/jobscz';
+import { mockScrapeJobsCz } from '../../../../mocks/mockScrapers';
 import { isOllamaAvailable } from '@/lib/ai/ollama';
 import { processJobWithAI } from '@/lib/ai/jobProcessing';
 import { getScrapingConfig } from '@/configureFilters';
@@ -134,7 +135,13 @@ export async function POST(request: Request) {
         if (source === 'jobs.cz' || source === 'all') {
           console.log('Scraping Jobs.cz...');
           const jobsCzConfig = config?.jobsCz || scrapingConfig.jobsCz;
-          const jobsCzJobs = await scrapeJobsCz(
+          const scraper = process.env.MOCK_MODE === 'true' ? mockScrapeJobsCz : scrapeJobsCz;
+          
+          if (process.env.MOCK_MODE === 'true') {
+            console.log('Using MOCK scraper for Jobs.cz');
+          }
+          
+          const jobsCzJobs = await scraper(
             jobsCzConfig,
             async (jobData) => {
               checkAbort(signal);
