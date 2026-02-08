@@ -14,9 +14,11 @@ function cleanupAllControllers() {
 }
 
 function cleanupDatabase() {
+  // Note: In process exit handlers, we can't reliably use await.
+  // Using force:true requests immediate close
   if (mongoose.connection.readyState === 1) {
-    mongoose.connection.close();
-    console.log('Database connection closed');
+    mongoose.connection.close(true).catch(() => {});
+    console.log('Database connection close requested');
   }
 }
 

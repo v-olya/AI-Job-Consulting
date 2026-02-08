@@ -15,20 +15,27 @@ if (!cached) {
 }
 
 export async function connectDB() {
-  if (cached.conn) {
+  // Check if we have a healthy connection
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, DATABASE_CONFIG.CONNECTION_OPTIONS);
-  }
-
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
+  // Reset cache if connection was dropped
+  if (mongoose.connection.readyState === 0) {
+    cached.conn = null;
     cached.promise = null;
-    throw e;
   }
 
+  if (!cached.promise) {
+    // Attach error handler to ensure retry is possible
+    cached.promise = mongoose.connect(MONGODB_URI, DATABASE_CONFIG.CONNECTION_OPTIONS)
+      .catch((e) => {
+        // Reset on failure so next call can retry
+        cached.promise = null;
+        throw e;
+      });
+  }
+
+  cached.conn = await cached.promise;
   return cached.conn;
 }
