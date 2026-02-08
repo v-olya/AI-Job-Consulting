@@ -21,6 +21,7 @@ async function processAndSaveJob(
 ): Promise<void> {
   checkAbort(signal);
   try {
+    // Fast-path check: skip if URL already exists
     if (jobData.url) {
       const existingJob = await Job.findOne({ url: jobData.url });
       if (existingJob) {
@@ -65,6 +66,12 @@ async function processAndSaveJob(
     
     console.log(`Saved: ${jobData.title}${status}`);
   } catch (error) {
+    // Handle DB duplicate key error (E11000) - is expected when the findOne check races with another insert.
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      skippedJobs.push(jobData.title || 'Unknown');
+      console.log(`Skipped (duplicate): ${jobData.title}`);
+      return;
+    }
     console.error(`${FE_ERROR_MESSAGES.JOB_SAVE_FAILED} ${jobData.title}:`, error instanceof Error ? error.message : FE_ERROR_MESSAGES.UNKNOWN_ERROR);
   }
 }
