@@ -3,6 +3,7 @@ import { searchCompanyInfo } from '@/lib/ai/companyResearch';
 import { JobAnalysisSchema, type JobAnalysis } from '@/schemas/JobAnalysis';
 import { CompanyInfoSchema, type CompanyInfo } from '@/schemas/CompanyInfo';
 import { FE_ERROR_MESSAGES } from '@/constants';
+import { checkAbort } from '../utils/operationAbortRegistry';
 
 export interface JobProcessingInput {
   title: string;
@@ -25,10 +26,8 @@ export async function processJobWithAI(
   const result: JobProcessingResult = {};
 
   try {
-    if (signal?.aborted) {
-      throw new Error('Operation cancelled');
-    }
-
+    checkAbort(signal);
+    
     const aiAnalysis = await analyzeJob({
       title: jobData.title,
       company: jobData.company,
@@ -47,9 +46,7 @@ export async function processJobWithAI(
       }
 
       if (validatedAnalysis.recommendation === 'Reagovat' || validatedAnalysis.recommendation === 'Zvážit') {
-        if (signal?.aborted) {
-          throw new Error('Operation cancelled');
-        }
+        checkAbort(signal);
 
         const companyNameForResearch = result.updatedCompanyName || jobData.company;
 

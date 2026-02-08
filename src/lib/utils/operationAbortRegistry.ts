@@ -88,3 +88,10 @@ export function abortOperation(type: OperationType): boolean {
   entry.cleanup();
   return true;
 }
+
+
+export function checkAbort(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new Error('Operation cancelled');
+  }
+}

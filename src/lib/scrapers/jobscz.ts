@@ -11,6 +11,7 @@ import {
   JOB_SOURCES, 
   DEFAULT_LOCATION 
 } from '@/constants';
+import { checkAbort } from '../utils/operationAbortRegistry';
 
 export async function scrapeJobsCz(
   config: JobsCzConfig,
@@ -36,9 +37,7 @@ export async function scrapeJobsCz(
     let currentPage = 1;
     
     while (true) {
-      if (signal?.aborted) {
-        throw new Error('Operation cancelled');
-      }
+      checkAbort(signal);
       
       await SCRAPING_THROTTLER.throttle();
       
@@ -97,14 +96,12 @@ export async function scrapeJobsCz(
       console.log(`Page ${currentPage}: ${jobUrls.length} jobs found`);
       
       for (let i = 0; i < jobUrls.length; i++) {
-        if (signal?.aborted) {
-          throw new Error('Operation cancelled');
-        }
+        checkAbort(signal);
         
         const jobInfo = jobUrls[i];
         try {
           await DETAIL_THROTTLER.throttle();
-          const jobData = await scrapeJobDetail(page, jobInfo.url);
+          const jobData = await scrapeJobDetail(page, jobInfo.url, signal);
           if (jobData) {
             allJobs.push(jobData);
             console.log(`✓ Scraped: ${jobData.title} at ${jobData.company}`);
@@ -135,17 +132,36 @@ export async function scrapeJobsCz(
   }
 }
 
-async function scrapeJobDetail(page: Page, jobUrl: string): Promise<Partial<IJob> | null> {
+async function scrapeJobDetail(
+  page: Page, 
+  jobUrl: string, 
+  signal?: AbortSignal
+): Promise<Partial<IJob> | null> {
   try {
-    const timeoutPromise = new Promise<null>((_, reject) => {
-      setTimeout(() => reject(new Error('Job detail scraping timeout')), 20000);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Job detail scraping timeout'));
+      }, 20000);
+      
+      // Cleanup timeout on abort
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Operation cancelled'));
+        }, { once: true });
+      }
     });
     
     const scrapePromise = (async () => {
-      await page.goto(jobUrl, { 
-        waitUntil: 'domcontentloaded',
-        timeout: 15000
-      });
+        checkAbort(signal);
+        
+        await page.goto(jobUrl, { 
+          waitUntil: 'domcontentloaded', 
+          timeout: 15000 
+        });
+        
+        // Check for abort during scraping
+        checkAbort(signal);
       
       const content = await page.content();
       const $ = cheerio.load(content);
@@ -157,7 +173,7 @@ async function scrapeJobDetail(page: Page, jobUrl: string): Promise<Partial<IJob
       
       const company = $('.JobDescriptionHeading').siblings('.IconWithText').find('p').text().trim() || '';
       const descriptionElement = $('[data-test="jd-body-richtext"]');
-      const description = descriptionElement?.text().trim() ?? stripHtmlAndPreserveSpaces($('body').html() || '');;
+      const description = descriptionElement?.text().trim() ?? stripHtmlAndPreserveSpaces($('body').html() || '');
 
       const locationSelectors = [
         '[data-test="jd-info-location"]',
@@ -172,9 +188,7 @@ async function scrapeJobDetail(page: Page, jobUrl: string): Promise<Partial<IJob
           break;
         }
       }
-      
-
-      
+    
       return {
         title,
         company,

@@ -4,6 +4,7 @@ import { Job } from '@/schemas/Job';
 import { processJobWithAI } from '@/lib/ai/jobProcessing';
 import { FE_ERROR_MESSAGES } from '@/constants';
 import { withRegisteredOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
+import { checkAbort } from '@/lib/utils/operationAbortRegistry';
 
 const AI_PROCESSING_OPERATION_TYPE: OperationType = 'ai-processing';
 
@@ -27,6 +28,8 @@ export async function POST(request: Request) {
       },
       async (signal) => {
         await connectDB();
+
+        checkAbort(signal);
 
         if (signal.aborted) {
           throw new Error('Operation cancelled');
@@ -53,6 +56,8 @@ export async function POST(request: Request) {
         console.log(`Starting AI processing for ${unprocessedJobs.length} jobs`);
 
         for (const job of unprocessedJobs) {
+          checkAbort(signal);
+          
           if (signal.aborted) {
             throw new Error('Operation cancelled');
           }
@@ -93,6 +98,8 @@ export async function POST(request: Request) {
               failedCount++;
             }
           } catch (error) {
+            checkAbort(signal);
+            
             if (
               error instanceof Error &&
               (error.message === 'Operation cancelled' || error.name === 'AbortError')

@@ -8,6 +8,7 @@ import { processJobWithAI } from '@/lib/ai/jobProcessing';
 import { getScrapingConfig } from '@/configureFilters';
 import { FE_ERROR_MESSAGES } from '@/constants';
 import { withRegisteredOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
+import { checkAbort } from '@/lib/utils/operationAbortRegistry';
 
 const SCRAPING_OPERATION_TYPE: OperationType = 'scraping';
 
@@ -18,9 +19,7 @@ async function processAndSaveJob(
   skippedJobs: string[],
   signal?: AbortSignal
 ): Promise<void> {
-  if (signal?.aborted) {
-    throw new Error('Operation cancelled');
-  }
+  checkAbort(signal);
   try {
     if (jobData.url) {
       const existingJob = await Job.findOne({ url: jobData.url });
@@ -108,6 +107,7 @@ export async function POST(request: Request) {
           const startupJobs = await scrapeStartupJobs(
             startupJobsConfig,
             async (jobData) => {
+              checkAbort(signal);
               if (signal.aborted) {
                 throw new Error('Operation cancelled');
               }
@@ -130,6 +130,7 @@ export async function POST(request: Request) {
           const jobsCzJobs = await scrapeJobsCz(
             jobsCzConfig,
             async (jobData) => {
+              checkAbort(signal);
               if (signal.aborted) {
                 throw new Error('Operation cancelled');
               }
