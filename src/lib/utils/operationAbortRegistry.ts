@@ -87,6 +87,10 @@ export function abortOperation(type: OperationType): boolean {
   return true;
 }
 
+export function hasActiveOperation(type: OperationType): boolean {
+  return activeControllers.has(type);
+}
+
 
 export function checkAbort(signal?: AbortSignal): void {
   if (signal?.aborted) {
