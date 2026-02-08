@@ -62,22 +62,3 @@ export async function searchCompanyInfo(companyName: string, signal?: AbortSigna
     return null;
   }
 }
-
-export function generateCompanySummary(companyInfo: CompanyInfo): string {
-  const parts = [];
-  
-  parts.push(`**${companyInfo.name}**`);
-  
-  if (companyInfo.website) {
-    parts.push(`Website: ${companyInfo.website}`);
-  }
-  
-  if (companyInfo.keyFacts?.length) {
-    parts.push('\n**Key Facts:**');
-    companyInfo.keyFacts.forEach((fact: string) => {
-      parts.push(`• ${fact.trim()}`);
-    });
-  }
-  
-  return parts.join('\n');
-}

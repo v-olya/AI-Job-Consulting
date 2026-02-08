@@ -1,14 +1,9 @@
+import { OperationType } from '@/lib/utils/operationAbortRegistry';
 import { useCallback, useState, useEffect, useRef } from 'react';
 
-export type OperationType = 'scraping' | 'ai-processing';
-
-export interface AsyncOperationSession {
+interface AsyncOperationSession {
   type: OperationType;
   source?: string;
-}
-
-export interface UseAsyncOperationStateOptions {
-  operationType: OperationType;
 }
 
 const CHANNEL_NAME = 'job-operations-sync';
@@ -19,7 +14,9 @@ interface BroadcastMessage {
   source?: string;
 }
 
-export function useAsyncOperationState(options: UseAsyncOperationStateOptions) {
+export function useAsyncOperationState(options: {
+  operationType: OperationType;
+}) {
   const { operationType } = options;
   const [session, setSession] = useState<AsyncOperationSession | null>(null);
   const isOperationActive = session !== null;

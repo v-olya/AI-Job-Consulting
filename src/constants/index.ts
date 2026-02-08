@@ -47,14 +47,7 @@ export const TIMEOUT_CONFIG = {
   SELECTOR_WAIT: 15000,
 } as const;
 
-export const COMMON_TECHNOLOGIES = [
-  'JavaScript', 'TypeScript', 'React', 'Angular', 'Vue', 'Node.js', 'Next.js',
-  'Python', 'Java', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
-  'HTML', 'CSS', 'SASS', 'SCSS', 'Tailwind', 'Bootstrap',
-  'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Docker', 'Kubernetes',
-  'AWS', 'Azure', 'GCP', 'Git', 'GraphQL', 'REST', 'API',
-  'AI', 'ML', 'LangChain', 'TensorFlow', 'PyTorch'
-] as const;
+
 
 export const JOB_SOURCES = {
   STARTUPJOBS: 'startupjobs',

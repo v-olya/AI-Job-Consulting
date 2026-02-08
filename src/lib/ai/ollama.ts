@@ -44,8 +44,6 @@ export function createOllamaClient(signal?: AbortSignal) {
   });
 }
 
-export const defaultOllamaClient = createOllamaClient();
-
 export async function isOllamaAvailable(): Promise<boolean> {
   try {
     const ollama = createOllamaClient();

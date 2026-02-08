@@ -7,18 +7,16 @@ interface OperationEntry {
 
 const activeControllers = new Map<OperationType, OperationEntry>();
 
-export interface RegisteredOperation {
+interface RegisteredOperation {
   ok: true;
   controller: AbortController;
   signal: AbortSignal;
   cleanup: () => void;
 }
 
-export interface RejectedOperation {
+interface RejectedOperation {
   ok: false;
 }
-
-export type RegisterOperationResult = RegisteredOperation | RejectedOperation;
 
 export async function withRegisteredOperation<T>(
   options: {
@@ -41,11 +39,11 @@ export async function withRegisteredOperation<T>(
   }
 }
 
-export function registerOperation(options: {
+function registerOperation(options: {
   type: OperationType;
   timeoutMs: number;
   onTimeout?: () => void;
-}): RegisterOperationResult {
+}): RegisteredOperation | RejectedOperation {
   const { type, timeoutMs, onTimeout } = options;
 
   if (activeControllers.has(type)) {

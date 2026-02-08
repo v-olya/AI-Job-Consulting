@@ -5,7 +5,7 @@ import { CompanyInfoSchema, type CompanyInfo } from '@/schemas/CompanyInfo';
 import { FE_ERROR_MESSAGES } from '@/constants';
 import { checkAbort } from '../utils/operationAbortRegistry';
 
-export interface JobProcessingInput {
+interface JobProcessingInput {
   title: string;
   company: string;
   description: string;
@@ -13,7 +13,7 @@ export interface JobProcessingInput {
   salary?: string;
 }
 
-export interface JobProcessingResult {
+interface JobProcessingResult {
   aiAnalysis?: JobAnalysis;
   companyResearch?: CompanyInfo;
   updatedCompanyName?: string;
