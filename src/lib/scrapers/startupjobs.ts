@@ -14,7 +14,7 @@ export async function scrapeStartupJobs(
   
   try {
     let currentPage = 1;
-    const maxPages = 5;
+    let maxPages = 1;
     
     while (currentPage <= maxPages) {
       await API_THROTTLER.throttle();
@@ -81,6 +81,17 @@ export async function scrapeStartupJobs(
 
         const data = await response.json() as StartupJobsApiResponse;
         const responseData = Array.isArray(data) ? data : data.data;
+        
+        // Get pagination info from view field if available
+        if (responseData?.length) {
+          const view = data?.view;
+          if (view?.last) {
+            const lastPageMatch = view.last.match(/page=(\d+)$/);
+            if (lastPageMatch && lastPageMatch[1]) {
+              maxPages = parseInt(lastPageMatch[1], 10);
+            }
+          }
+        }
         
         if (!Array.isArray(responseData)) {
           console.log(`Invalid response structure on page ${currentPage}, stopping`);

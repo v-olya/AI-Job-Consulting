@@ -133,7 +133,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
               <div>
                 <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
                   <span>⚠️</span>
-                  {unprocessed} jobs need AI processing
+                  {unprocessed} jobs in total need AI processing
                 </h3>
                 <p className="text-yellow-800 text-sm mt-1">
                   Run AI analysis on unprocessed jobs to get summaries, skills, and scores
@@ -208,7 +208,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
             ← Previous
           </PaginationButton>
           <span>
-            &nbsp;{currentSkip + 1}&thinsp;-&thinsp;{Math.min(currentSkip + currentLimit, initialData.pagination.total)}&nbsp; of &nbsp;{initialData.pagination.total}&nbsp;
+            &nbsp;{Math.min(currentSkip + 1, initialData.pagination.total)}&thinsp;-&thinsp;{Math.min(currentSkip + currentLimit, initialData.pagination.total)}&nbsp; of &nbsp;{initialData.pagination.total}&nbsp;
           </span>
           <PaginationButton 
             onClick={() => updateFilters({ skip: currentSkip + currentLimit })}
