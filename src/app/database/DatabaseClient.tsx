@@ -155,18 +155,20 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </div>
         </div>
 
-        {(unprocessed > 0 || processingResult) && (
+        {(unprocessed > 0 || processingResult) && 
           <div className="mb-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-xl shadow-sm">
             <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
-                  <span>⚠️</span>
-                  {unprocessed} job offers in total need processing
-                </h3>
-                <p className="text-yellow-800 text-sm mt-1">
-                  Run AI analysis to get job scores and recommendations
-                </p>
-              </div>
+              {(unprocessed > 0) && 
+                <div>
+                  <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
+                    <span>⚠️</span>
+                    {unprocessed} job offers in total need processing
+                  </h3>
+                  <p className="text-yellow-800 text-sm mt-1">
+                    Run AI analysis to get job scores and recommendations
+                  </p>
+                </div>
+              }
               <div className="flex gap-3">
                 {isOperationActive && (
                   <button
@@ -191,7 +193,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
               </div>
             )}
           </div>
-        )}
+        }
 
         <div className="flex gap-4 mb-8 flex-wrap justify-center">
           <select 
@@ -246,7 +248,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
           </PaginationButton>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {initialData.jobs.map(job => (
             <JobCard key={job._id} job={job} />
           ))}

@@ -195,10 +195,10 @@ export default function Home() {
             </div>
           ) : topJobs.length > 0 ? (
             <>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {topJobs.slice(0, displayLimit).map((job, index) => (
                   <div key={job._id} className="relative">
-                    <div className="absolute -left-4 top-4 bg-gradient-to-br from-blue-500 to-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
+                    <div className="absolute -top-2 -left-2 bg-gradient-to-br from-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
                       {index + 1}
                     </div>
                     <JobCard job={job} />
