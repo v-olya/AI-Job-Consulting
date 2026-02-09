@@ -4,7 +4,7 @@ import { IJob } from '../src/schemas/Job';
 
 async function mockScrapeJobsCz(
   _config: unknown,
-  callback: (jobData: Partial<IJob>) => Promise<void>,
+  callback?: (jobData: Partial<IJob>) => Promise<void>,
   signal?: AbortSignal
 ): Promise<Partial<IJob>[]> {
 const mockJobs = [
@@ -50,7 +50,9 @@ const mockJobs = [
       throw new Error('Operation cancelled');
     }
     console.log(`Mock scraping: ${jobData.title}`);
-    await callback(jobData);
+    if (callback) {
+      await callback(jobData);
+    }
   }
   
   return mockJobs;
