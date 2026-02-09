@@ -1,4 +1,4 @@
-export interface ErrorAnalysis {
+interface ErrorAnalysis {
   isTimeout: boolean;
   isNetwork: boolean;
   isRetryable: boolean;
@@ -41,19 +41,4 @@ export function analyzeError(error: Error): ErrorAnalysis {
     isRetryable,
     errorType
   };
-}
-
-export function getErrorDescription(analysis: ErrorAnalysis): string {
-  switch (analysis.errorType) {
-    case 'timeout':
-      return 'Request timed out';
-    case 'network':
-      return 'Network connection failed';
-    case 'parsing':
-      return 'Failed to parse response';
-    case 'format':
-      return 'Invalid response format';
-    default:
-      return 'Unknown error';
-  }
 }

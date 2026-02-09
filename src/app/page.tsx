@@ -10,7 +10,7 @@ import { OutlineButton } from '@/components/buttons/OutlineButton';
 import { GradientButton } from '@/components/buttons/GradientButton';
 import { CancelButton } from '@/components/buttons/CancelButton';
 import { useJobCards } from '@/hooks/useJobCards';
-import { useScrapingState } from '@/hooks/useScrapingState';
+import { useAsyncOperationState } from '@/hooks/useAsyncOperationState';
 
 export default function Home() {
   const router = useRouter();
@@ -21,16 +21,12 @@ export default function Home() {
   const { topJobs, loading: loadingJobs, refetch: refetchTopJobs } = useJobCards(50);
   
   const {
-    isScrapingActive,
-    isOwnSession,
-    canStartScraping,
-    startScraping,
-    stopScraping,
-    cancelScraping,
-    forceStopSession,
-    session,
-    tabId
-  } = useScrapingState();
+    isOperationActive,
+    startOperation,
+    stopOperation,
+    cancelOperation,
+    activeOperation
+  } = useAsyncOperationState({ operationType: 'scraping' });
 
   useEffect(() => {
     setMounted(true);
@@ -53,15 +49,11 @@ export default function Home() {
   };
 
   const handleScrape = async (source: string) => {
-    if (!canStartScraping) {
-      setLastScrapeResult({
-        success: false,
-        error: 'Scraping is already running in another tab'
-      });
+    if (isOperationActive) {
       return;
     }
 
-    const started = startScraping(source);
+    const started = startOperation(source);
     if (!started) {
       setLastScrapeResult({
         success: false,
@@ -77,10 +69,19 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          source,
-          tabId
+          source
         })
       });
+      
+      // Handle race condition: server rejected because operation already running
+      if (response.status === 409) {
+        stopOperation(); // Revert optimistic local state
+        setLastScrapeResult({
+          success: false,
+          error: 'Scraping is already running in another tab'
+        });
+        return;
+      }
       
       const result = await response.json();
       setLastScrapeResult(result);
@@ -95,12 +96,12 @@ export default function Home() {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
-      stopScraping();
+      stopOperation();
     }
   };
 
   const handleCancel = async () => {
-    await cancelScraping();
+    await cancelOperation();
     setLastScrapeResult({
       success: false,
       cancelled: true,
@@ -128,49 +129,37 @@ export default function Home() {
           </div>
         ) : (
           <div className="mb-8 flex flex-wrap gap-4">
-            {isOwnSession ? (
-              <CancelButton onClick={handleCancel} />
+            {isOperationActive? (
+              <div className="mx-auto">
+                <CancelButton onClick={handleCancel}/>
+              </div>
             ) : (
               <>
                 <GradientButton
                   onClick={() => handleScrape('startupjobs')}
-                  disabled={isScrapingActive}
+                  disabled={isOperationActive}
                   variant="blue"
                 >
-                  {isScrapingActive && session?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+                  {isOperationActive && activeOperation?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
                 </GradientButton>
                 
                 <GradientButton
                   onClick={() => handleScrape('jobs.cz')}
-                  disabled={isScrapingActive}
+                  disabled={isOperationActive}
                   variant="green"
                 >
-                  {isScrapingActive && session?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+                  {isOperationActive && activeOperation?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
                 </GradientButton>
                 
                 <GradientButton
                   onClick={() => handleScrape('all')}
-                  disabled={isScrapingActive}
+                  disabled={isOperationActive}
                   variant="purple"
                 >
-                  {isScrapingActive && session?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
+                  {isOperationActive && activeOperation?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
                 </GradientButton>
               </>
             )}
-          </div>
-        )}
-        
-        {mounted && isScrapingActive && !isOwnSession && (
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-            <p className="text-yellow-800 text-sm">
-              ⚠️ Scraping is currently running in another tab
-            </p>
-            <button
-              onClick={forceStopSession}
-              className="px-3 py-1 text-sm bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors"
-            >
-              Force Stop
-            </button>
           </div>
         )}
 

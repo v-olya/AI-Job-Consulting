@@ -21,8 +21,3 @@ export function stripHtmlTags(html: string): string {
 export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('en-US');
 }
-
-export function formatScore(score: number | undefined): string {
-  if (score === undefined) return 'N/A';
-  return `${score}/100`;
-}

@@ -9,7 +9,7 @@ export const DATABASE_CONFIG = {
 
 export const OLLAMA_CONFIG = {
   DEFAULT_HOST: 'http://localhost:11434',
-  DEFAULT_MODEL: 'qwen3-vl:235b-cloud',
+  DEFAULT_MODEL: 'gpt-oss:20b',
   TIMEOUT: {
     REQUEST: 180000, // 3 minutes
     HEADERS: 30000,  // 30 seconds for headers
@@ -47,14 +47,7 @@ export const TIMEOUT_CONFIG = {
   SELECTOR_WAIT: 15000,
 } as const;
 
-export const COMMON_TECHNOLOGIES = [
-  'JavaScript', 'TypeScript', 'React', 'Angular', 'Vue', 'Node.js', 'Next.js',
-  'Python', 'Java', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin',
-  'HTML', 'CSS', 'SASS', 'SCSS', 'Tailwind', 'Bootstrap',
-  'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Docker', 'Kubernetes',
-  'AWS', 'Azure', 'GCP', 'Git', 'GraphQL', 'REST', 'API',
-  'AI', 'ML', 'LangChain', 'TensorFlow', 'PyTorch'
-] as const;
+
 
 export const JOB_SOURCES = {
   STARTUPJOBS: 'startupjobs',
@@ -131,16 +124,14 @@ DŮLEŽITÉ: Pokud nedokážeš z popisu pozice identifikovat název společnost
 
 `;
 
-export const SCRAPING_SESSION_CONFIG = {
-  STORAGE_KEY: 'job-scraper-session',
-} as const;
-
 export const FE_ERROR_MESSAGES = {
   UNKNOWN_ERROR: 'Unknown error',
   DATABASE_LOAD_FAILED: 'Failed to load database data',
   DATABASE_ERROR_TITLE: 'Error',
   AI_PROCESSING_ERROR: 'AI processing error',
   AI_ANALYSIS_FAILED: 'AI analysis failed for',
+  AI_START_FAILED: 'Failed to start AI processing',
+  AI_PROCESSING_CANCELLED: 'AI processing cancelled',
   JOB_SAVE_FAILED: 'Failed to save',
   OLLAMA_NOT_AVAILABLE: 'Ollama not available - jobs will be saved without AI analysis',
   NO_JOBS_FOUND: 'No jobs found to scrape',

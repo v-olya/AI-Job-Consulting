@@ -18,7 +18,7 @@ function cleanHtmlDescription(htmlDescription: string): string {
 }
 
 function formatSalary(salary?: StartupJobsOffer['salary']): string | undefined {
-  if (!salary) return undefined;
+  if (!salary) return;
   
   const { from, to, currency } = salary;
   const parts = [];
@@ -26,7 +26,7 @@ function formatSalary(salary?: StartupJobsOffer['salary']): string | undefined {
   if (from) parts.push(from.toString());
   if (to) parts.push(to.toString());
   
-  if (!parts.length) return undefined;
+  if (!parts.length) return;
   
   const range = parts.length === 2 ? `${parts[0]}-${parts[1]}` : parts[0];
   return `${range} ${currency || 'CZK'}`;

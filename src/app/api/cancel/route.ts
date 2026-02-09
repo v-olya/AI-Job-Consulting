@@ -1,65 +1,31 @@
 import { NextResponse } from 'next/server';
-
-const MAX_ACTIVE_CONTROLLERS = 10;
-const activeControllers = new Map<string, AbortController>();
-
-export function registerAbortController(tabId: string, controller: AbortController): boolean {
-  if (activeControllers.has(tabId)) {
-    return false;
-  }
-
-  if (activeControllers.size >= MAX_ACTIVE_CONTROLLERS) {
-    const oldestKey = activeControllers.keys().next().value as string | undefined;
-    if (oldestKey) {
-      const oldController = activeControllers.get(oldestKey);
-      if (oldController) {
-        oldController.abort();
-      }
-      activeControllers.delete(oldestKey);
-    }
-  }
-  
-  activeControllers.set(tabId, controller);
-  return true;
-}
-
-export function unregisterAbortController(tabId: string): void {
-  activeControllers.delete(tabId);
-}
+import { abortOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
 
 export async function POST(request: Request) {
   try {
-    const { tabId } = await request.json();
+    const { type } = await request.json();
 
-    if (!tabId) {
-      return NextResponse.json(
-        { success: false, error: 'Tab ID is required' },
-        { status: 400 }
-      );
-    }
+    const operationType: OperationType = type || 'scraping';
+    const didAbort = abortOperation(operationType);
 
-    const controller = activeControllers.get(tabId);
-    if (controller) {
-      controller.abort();
-      activeControllers.delete(tabId);
-      
+    if (didAbort) {
       return NextResponse.json({
         success: true,
-        message: 'Scraping cancelled successfully'
+        message: 'Operation cancelled successfully'
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: 'No active scraping session found'
+      message: 'No active operation found'
     });
 
   } catch (error) {
-    console.error('Error cancelling scraping:', error);
+    console.error('Error cancelling operation:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

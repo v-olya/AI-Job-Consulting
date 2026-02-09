@@ -1,16 +1,14 @@
 import { OLLAMA_CONFIG, COMPANY_RESEARCH_PROMPTS } from '@/constants';
 import { CompanyInfoSchema, companyInfoJsonSchema, type CompanyInfo } from '@/schemas/CompanyInfo';
-
 import { createOllamaClient } from './ollama';
+import { checkAbort } from '../utils/operationAbortRegistry';
 
 export async function searchCompanyInfo(companyName: string, signal?: AbortSignal): Promise<CompanyInfo | null> {
   const ollama = createOllamaClient(signal);
-
+  
   try {
-    if (signal?.aborted) {
-      throw new Error('Operation cancelled');
-    }
-
+    checkAbort(signal);
+    
     const searchResponse = await ollama.webSearch({
       query: `${companyName} company information business profile industry size location`,
       maxResults: 5
@@ -21,10 +19,8 @@ export async function searchCompanyInfo(companyName: string, signal?: AbortSigna
       return null;
     }
 
-    if (signal?.aborted) {
-      throw new Error('Operation cancelled');
-    }
-
+    checkAbort(signal);
+    
     const searchContext = searchResponse.results
       .map((result, index) => `
         Výsledek ${index + 1}:
@@ -57,29 +53,12 @@ export async function searchCompanyInfo(companyName: string, signal?: AbortSigna
     
     return companyInfo;
   } catch (error) {
+    checkAbort(signal);
+    
     if (signal?.aborted && (error instanceof Error && (error.message === 'Operation cancelled' || error.name === 'AbortError'))) {
       throw error;
     }
     console.error('Company research failed:', error);
     return null;
   }
-}
-
-export function generateCompanySummary(companyInfo: CompanyInfo): string {
-  const parts = [];
-  
-  parts.push(`**${companyInfo.name}**`);
-  
-  if (companyInfo.website) {
-    parts.push(`Website: ${companyInfo.website}`);
-  }
-  
-  if (companyInfo.keyFacts?.length) {
-    parts.push('\n**Key Facts:**');
-    companyInfo.keyFacts.forEach((fact: string) => {
-      parts.push(`• ${fact.trim()}`);
-    });
-  }
-  
-  return parts.join('\n');
 }

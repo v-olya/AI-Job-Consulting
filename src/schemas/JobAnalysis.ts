@@ -5,7 +5,11 @@ export const JobAnalysisSchema = z.object({
   body: z.object({
     summary: z.string(),
     analysis: z.string(),
-    risks_opportunities: z.string()
+    risks_opportunities: z.preprocess((value) => {
+      if (typeof value === 'string') return value;
+      if (value !== null && typeof value === 'object') return JSON.stringify(value);
+      return value;
+    }, z.string())
   }),
   score: z.number().min(1).max(10),
   companyName: z.string().nullable().optional()

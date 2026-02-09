@@ -1,8 +1,9 @@
 import { Ollama } from 'ollama';
 import { OLLAMA_CONFIG, SYSTEM_PROMPT } from '@/constants';
 import { JobAnalysisSchema, jobAnalysisJsonSchema, type JobAnalysis } from '@/schemas/JobAnalysis';
-import { analyzeError, getErrorDescription } from '@/lib/utils/errorUtils';
+import { analyzeError } from '@/lib/utils/errorUtils';
 import { Throttler, delay } from '@/lib/utils/throttlers';
+import { checkAbort } from '../utils/operationAbortRegistry';
 
 const AI_THROTTLER = new Throttler(1000);
 
@@ -83,10 +84,8 @@ ${jobData.description}`;
 
   for (let attempt = 1; attempt <= OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS; attempt++) {
     try {
-      if (signal?.aborted) {
-        throw new Error('Operation cancelled');
-      }
-      
+      checkAbort(signal);
+
       await AI_THROTTLER.throttle();
       
       console.log(`Analyzing job "${jobData.title}" (attempt ${attempt}/${OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS})`);
@@ -124,8 +123,7 @@ ${jobData.description}`;
       }
       
       const errorAnalysis = analyzeError(lastError);
-      const errorDescription = getErrorDescription(errorAnalysis);
-      
+
       console.warn(`Attempt ${attempt} failed for job "${jobData.title}":`, {
         error: lastError.message,
         type: errorAnalysis.errorType,
@@ -133,18 +131,20 @@ ${jobData.description}`;
       });
       
       if (!errorAnalysis.isRetryable) {
-        console.error(`Non-retryable error for job "${jobData.title}": ${errorDescription}`);
-        break;
+        console.error(`Non-retryable error for job "${jobData.title}": ${lastError.message}`);
+        return;
       }
-      
-      if (attempt < OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS) {
-        const delayMs = OLLAMA_CONFIG.RETRY.DELAY * attempt;
-        console.log(`Waiting ${delayMs}ms before retry...`);
-        await delay(delayMs, signal);
+
+      if (attempt === OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS) {
+        console.error(`Failed to analyze job "${jobData.title}" after ${OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS} attempts: ${lastError?.message}`);
+        return;
       }
+
+      const delayMs = OLLAMA_CONFIG.RETRY.DELAY * attempt;
+      console.log(`Waiting ${delayMs}ms before retry...`);
+      await delay(delayMs, signal);
     }
   }
-  
-  console.error(`Failed to analyze job "${jobData.title}" after ${OLLAMA_CONFIG.RETRY.MAX_ATTEMPTS} attempts:`, lastError?.message);
-  return undefined;
+
+  return;
 }

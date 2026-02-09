@@ -97,10 +97,12 @@ export interface StartupJobsApiResponse {
   totalItems: number;
   member: StartupJobsOffer[];
   data: StartupJobsOffer[];
-  meta: {
-    last_page: number;
-    current_page: number;
-    total: number;
+  view?: {
+    '@id': string;
+    '@type': 'PartialCollectionView';
+    first?: string;
+    last?: string;
+    next?: string;
   };
 }
 
@@ -216,13 +218,4 @@ export interface StartupJobsOffer {
 export interface CachedConnection {
   conn: typeof import('mongoose') | null;
   promise: Promise<typeof import('mongoose')> | null;
-}
-
-export interface CompanyResearchResponse {
-  success: boolean;
-  data?: {
-    companyInfo: CompanyInfo;
-    summary: string;
-  };
-  error?: string;
 }

@@ -3,11 +3,19 @@ import { THROTTLING_CONFIG } from '@/constants';
 export function delay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(resolve, ms);
+    
     if (signal) {
-      signal.addEventListener('abort', () => {
+      const handleAbort = () => {
         clearTimeout(timeoutId);
         reject(new Error('Operation cancelled'));
-      }, { once: true });
+      };
+      
+      if (signal.aborted) {
+        handleAbort();
+        return;
+      }
+      
+      signal.addEventListener('abort', handleAbort, { once: true });
     }
   });
 }

@@ -3,6 +3,7 @@ import { API_THROTTLER } from '@/lib/utils/throttlers';
 import { stripHtmlTags } from '@/lib/utils/textUtils';
 import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@/types';
 import { BROWSER_CONFIG, JOB_SOURCES } from '@/constants';
+import { checkAbort } from '../utils/operationAbortRegistry';
 
 export async function scrapeStartupJobs(
   config: StartupJobsConfig,
@@ -12,39 +13,35 @@ export async function scrapeStartupJobs(
   const allJobs: Partial<IJob>[] = [];
   
   try {
-    let currentPage = config.page || 1;
-    let hasMorePages = true;
+    let currentPage = 1;
+    let maxPages = 1;
     
-    while (hasMorePages) {
-      if (signal?.aborted) {
-        throw new Error('Operation cancelled');
-      }
-      
+    while (currentPage <= maxPages) {
       await API_THROTTLER.throttle();
-      
+      checkAbort(signal);
       const params = new URLSearchParams();
       params.append('page', currentPage.toString());
       params.append('startupOnly', config.startupOnly?.toString() || 'false');
       
-      if (config.fields && Array.isArray(config.fields)) {
+      if (Array.isArray(config.fields)) {
         config.fields.forEach(field => {
           params.append('fields[]', field);
         });
       }
       
-      if (config.locations && Array.isArray(config.locations)) {
+      if (Array.isArray(config.locations)) {
         config.locations.forEach(location => {
           params.append('locations[]', location);
         });
       }
       
-      if (config.locationPreference && Array.isArray(config.locationPreference)) {
+      if (Array.isArray(config.locationPreference)) {
         config.locationPreference.forEach(pref => {
           params.append('locationPreference[]', pref);
         });
       }
       
-      if (config.seniority && Array.isArray(config.seniority)) {
+      if (Array.isArray(config.seniority)) {
         config.seniority.forEach(level => {
           params.append('seniority[]', level);
         });
@@ -84,6 +81,17 @@ export async function scrapeStartupJobs(
 
         const data = await response.json() as StartupJobsApiResponse;
         const responseData = Array.isArray(data) ? data : data.data;
+        
+        // Get pagination info from view field if available
+        if (responseData?.length) {
+          const view = data?.view;
+          if (view?.last) {
+            const lastPageMatch = view.last.match(/page=(\d+)$/);
+            if (lastPageMatch && lastPageMatch[1]) {
+              maxPages = parseInt(lastPageMatch[1], 10);
+            }
+          }
+        }
         
         if (!Array.isArray(responseData)) {
           console.log(`Invalid response structure on page ${currentPage}, stopping`);
@@ -134,15 +142,11 @@ export async function scrapeStartupJobs(
         
         if (onJobScraped) {
           for (const job of jobs) {
-            if (signal?.aborted) {
-              throw new Error('Operation cancelled');
-            }
+            checkAbort(signal);
             await onJobScraped(job);
           }
         }
         
-        const meta = Array.isArray(data) ? null : data.meta;
-        hasMorePages = meta?.last_page ? currentPage < meta.last_page : false;
         currentPage++;
         
         if (jobs.length) {
