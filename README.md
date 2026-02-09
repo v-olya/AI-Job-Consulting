@@ -7,7 +7,7 @@ AI-powered job scraping and analysis tool. Scrapes listings from StartupJobs.cz 
 - **Multi-source scraping** with configurable domain-specific filters
 - **AI analysis**: Local LLM processing via Ollama for job scoring, company research, and recommendations.
 - **Database viewer**: Browse, filter, and manage scraped jobs with pagination
-- **Session management**: Cross-tab operation state with cancellation support
+- **Multi-tabs management**: Cross-tab operation state with cancellation support
 
 ## Tech Stack
 
@@ -15,6 +15,8 @@ AI-powered job scraping and analysis tool. Scrapes listings from StartupJobs.cz 
 - MongoDB + Mongoose
 - Ollama (local AI)
 - Playwright + Cheerio (scraping)
+- Nodemailer (email notifications)
+- MSW (Mock Service Worker)
 
 ## Scraping Sources
 
@@ -25,60 +27,59 @@ AI-powered job scraping and analysis tool. Scrapes listings from StartupJobs.cz 
 
 ## Mock API Server
 
-This project includes a mock API server for development and testing purposes. It intercepts external API calls to `startupjobs.cz` and returns realistic mock data.
-
-### Features
-
-- **Network-level interception**: Uses MSW (Mock Service Worker) to intercept requests at the node network level.
-- **Realistic mock data**: Returns structured job listings that mirror real API responses.
-- **Zero code changes**: App code remains unchanged - mocking happens transparently.
-
-### Usage
-
-#### 1. Start with Mock Mode
+This project includes a mock API server that intercepts external API calls to `startupjobs.cz` and returns realistic mock data. When scraping `jobs.cz` with Playwright in dev mode, we can use Network-level MSW/interceptors. For this, start with
 
 ```bash
 npm run dev:mock
 ```
 
-This starts the development server with `MOCK_MODE=true` environment variable.
+This script will run the dev server with `MOCK_MODE=true` environment variable.
 
-#### 2. How it works
+### How it works
 
-When `MOCK_MODE=true` is set:
-1. `src/instrumentation.ts` initializes the MSW server using `mocks/node.ts`.
-2. Accessing `startupjobs` endpoints will return mocked data defined in `mocks/handlers.ts`.
-3. The `jobs.cz` scraper switches to a mock implementation (`mocks/mockScrapers.ts`) in `src/app/api/scrape/route.ts`.
+When `MOCK_MODE=true` is set, MSW (Mock Service Worker) intercepts requests at the node network level
 
-#### 3. Mock Data Structure
+**Source-specific handling**:
 
-The mock server returns realistic job listings. You can see the structure in `mocks/handlers.ts` (for StartupJobs) and `mocks/mockScrapers.ts` (for Jobs.cz).
+- `startupjobs.cz` → Mock data from `mocks/handlers.ts`
+- `jobs.cz` → Mock implementation from `mocks/mockScrapers.ts`
 
-### Environment Variables
+**Mock Data Structure**
+You can see the response structure in `mocks/handlers.ts` (for StartupJobs) and `mocks/mockScrapers.ts` (for Jobs.cz).
+
+## Environment Variables
+
+All configuration is managed through environment variables in `.env.local`:
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `MOCK_MODE` | `false` | Enable mock mode globally to intercept requests and use mock scrapers |
-
-5. **Run development server**:
-
-   ```bash
-   npm run dev
-   ```
+| ---------- | --------- | ------------- |
+| `MONGODB_URI` | `mongodb://localhost:27017/job-scraper` | MongoDB connection string |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_API_KEY` | - | Ollama API key (if required) |
+| `EMAIL_USER` | - | Your Gmail address |
+| `NOTIFICATION_EMAIL` | `EMAIL_USER` | Email address to receive notifications |
+| `OAUTH_CLIENT_ID` | - | Google OAuth2 client ID |
+| `OAUTH_CLIENT_SECRET` | - | Google OAuth2 client secret |
+| `OAUTH_REFRESH_TOKEN` | - | Google OAuth2 refresh token |
 
 ## Usage
 
-**NB!** We do not manage userIDs, the app is for a single user only.
+Run development server:
+
+```bash
+   npm run dev
+   ```
 
 1. Open <http://localhost:3000>
 2. Click scrape buttons to collect jobs from selected sources
-3. Jobs are automatically processed with AI during scraping (if Ollama is running)
-4. Visit **Database** to view all jobs, filter by source/status, and run AI processing on unprocessed jobs
+3. Jobs are automatically processed with AI during scraping (if Ollama is running) and emails are sent when there are recommendations for job applications. 
+4. If the operation fails during processing, the already scrapped data is saved to the database for you to run AI analysis later.
+5. On `/database` page, you can see all jobs, filtered by source/status, and trigger AI analysis on unprocessed ones.
 
 ## Scripts
 
 | Command | Description |
-|---------|-------------|
+| -------- | ------------- |
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
 | `npm run type-check` | Run TypeScript checks |
@@ -94,13 +95,32 @@ The mock server returns realistic job listings. You can see the structure in `mo
 - `src/configureFilters.ts` — scraping filters
 - `src/constants/context.ts` — AI context about you
 
+## Email Notifications
+
+When AI processes jobs, it automatically sends email notifications for positions it recommends applying to.
+
+### Feature description
+
+1. **Trigger**: When AI analysis recommends "Reagovat" (Apply) for a job
+2. **Email content**: Includes job title, company, location, salary, and AI analysis
+3. **Recipients**: Configured via environment variables
+4. **Service**: Uses Gmail with OAuth2 authentication via Nodemailer
+
+### Setup Instructions
+
+1. Enable Gmail API for your account
+2. Create OAuth2 credentials in Google Cloud Console
+3. Set up refresh token using OAuth2 playground
+4. Add credentials to `.env.local` file
+5. Restart the application
+
 ## API Routes
 
 | Route | Method | Description |
-|-------|--------|-------------|
+| ------- | -------- | ------------- |
 | `POST /api/scrape` | POST | Start scraping. Body: `{ source: 'startupjobs' \| 'jobs.cz' \| 'all' }` |
 | `POST /api/process-ai` | POST | AI-process unprocessed jobs. Body: `{ limit?: number }` |
-| `GET /api/jobs` | GET | List jobs with filters: `?source=&processed=&limit=&skip=` |
+| `GET /api/jobs` | GET | List jobs with filters: `?source=\u0026processed=\u0026limit=\u0026skip=` |
 | `GET /api/config` | GET | Current scraping configuration with field descriptions |
 | `GET /api/operation-status` | GET | Check if operation is running. Query: `?type=scraping\|ai-processing` |
 | `POST /api/cancel` | POST | Cancel running operation. Body: `{ type?: 'scraping' \| 'ai-processing' }` |
@@ -141,4 +161,13 @@ The application synchronizes operation state across multiple browser tabs using 
 
 If mother tab closes before operation completes: other tabs show "Processing..." until page refresh. Reload triggers mount-time server query → gets fresh state.
 
-**⚠️ Single-Instance Limitation**: Cancellation only works within the same server instance. AbortControllers are stored in a module-level Map. In serverless/multi-instance deployments, `/api/cancel` may hit a different instance than the running operation.
+**⚠️ Single-Server-Instance Limitation**:
+
+- This app cannot be deployed as a multi-tenant SaaS.
+- Cancellation only works within the same server instance (AbortControllers are stored in a module-level Map). In serverless or multi-instance deployments, `/api/cancel` may hit a different instance than the running operation.
+
+**⚠️ One-User Limitation** The application:
+
+- Does not manage user authentication or multiple user accounts
+- Stores all data in a single MongoDB database without user isolation
+- Shares the same AI context and configuration across all sessions.
