@@ -84,7 +84,7 @@ Run development server:
 | `npm run build` | Build for production |
 | `npm run type-check` | Run TypeScript checks |
 | `npm run lint` | Run ESLint |
-| `npm run preprocess` | Preprocess StartupJobs data |
+| `src/scripts/generate-refresh-token.ts` | Generate Google OAuth2 refresh token (Desktop app required) |
 | `npm run postinstall` | Auto-setup config files from templates |
 
 ### Postinstall Setup
@@ -109,8 +109,12 @@ When AI processes jobs, it automatically sends email notifications for positions
 ### Setup Instructions
 
 1. Enable Gmail API for your account
-2. Create OAuth2 credentials in Google Cloud Console
-3. Set up refresh token using OAuth2 playground
+2. Create OAuth2 credentials in Google Cloud Console (Desktop app type)
+3. Use the `src/scripts/generate-refresh-token.ts` script to get your refresh token:
+   ```bash
+   node src/scripts/generate-refresh-token.ts
+   ```
+   This opens a browser window for authorization and outputs your refresh token.
 4. Add credentials to `.env.local` file
 5. Restart the application
 
