@@ -1,3 +1,4 @@
+import { channel } from '@/lib/utils/broadcastChannel';
 import { OperationType } from '@/lib/utils/operationAbortRegistry';
 import { useCallback, useState, useEffect } from 'react';
 
@@ -8,28 +9,26 @@ interface ActiveOperation {
   source?: string;
 }
 
-const CHANNEL_NAME = 'job-operations-sync';
-
-interface BroadcastMessage {
+  interface BroadcastMessage<T = unknown> {
   type: 'START' | 'STOP';
   operationType: OperationType;
   source?: string;
+  payload?: T;
 }
 
-export function useAsyncOperationState(options: {
+export function useAsyncOperationState<T = unknown>(options: {
   operationType: OperationType;
+  onOperationComplete?: (payload: T) => void;
 }) {
-  const { operationType } = options;
+  const { operationType, onOperationComplete } = options;
   const [activeOperation, setActiveOperation] = useState<ActiveOperation | null>(null);
   const isOperationActive = activeOperation !== null;
 
   useEffect(() => {
     if (!isBrowser) return;
 
-    const channel = new BroadcastChannel(CHANNEL_NAME);
-
-    const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
-      const { type, operationType: msgOperationType, source } = event.data;
+    const handleMessage = (event: MessageEvent<BroadcastMessage<T>>) => {
+      const { type, operationType: msgOperationType, source, payload } = event.data;
 
       if (msgOperationType !== operationType) return;
 
@@ -38,6 +37,9 @@ export function useAsyncOperationState(options: {
       }
       if (type === 'STOP') {
         setActiveOperation(null);
+        if (payload && onOperationComplete) {
+          onOperationComplete(payload);
+        }
       }
     };
 
@@ -63,26 +65,21 @@ export function useAsyncOperationState(options: {
 
     return () => {
       channel.removeEventListener('message', handleMessage);
-      channel.close();
     };
-  }, [operationType]);
+  }, [operationType, onOperationComplete]);
 
   // Check server before committing to local state to prevent race conditions
   const startOperation = useCallback((source?: string): boolean => {
-    // Quick local check first (optimization)
     if (isOperationActive) {
       return false;
     }
-
     // Optimistically set local state and broadcast
-    // If server rejects (409), caller should call stopOperation() to revert
+    // If server rejects (409), a caller calls stopOperation() from .tsx
     setActiveOperation({ type: operationType, source });
 
     try {
       if (isBrowser) {
-        const channel = new BroadcastChannel(CHANNEL_NAME);
         channel.postMessage({ type: 'START', operationType, source });
-        channel.close();
       }
     } catch (error) {
       console.error('Failed to broadcast start operation:', error);
@@ -91,19 +88,22 @@ export function useAsyncOperationState(options: {
     return true;
   }, [operationType, isOperationActive]);
 
-  const stopOperation = useCallback((): void => {
+  const stopOperation = useCallback((payload?: T): void => {
     setActiveOperation(null);
+
+    // Update the initiating tab since BroadcastChannel doesn't send messages to self
+    if (payload && onOperationComplete) {
+      onOperationComplete(payload);
+    }
 
     try {
       if (isBrowser) {
-        const channel = new BroadcastChannel(CHANNEL_NAME);
-        channel.postMessage({ type: 'STOP', operationType });
-        channel.close();
+        channel.postMessage({ type: 'STOP', operationType, payload });
       }
     } catch (error) {
       console.error('Failed to broadcast stop operation:', error);
     }
-  }, [operationType]);
+  }, [operationType, onOperationComplete]);
 
   const cancelOperation = useCallback(async (): Promise<void> => {
     try {
