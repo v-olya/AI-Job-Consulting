@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
-import { connectDB } from '@/lib/utils/database';
-import { Job } from '@/schemas/Job';
-import { DatabaseData } from '@/types';
-import { FE_ERROR_MESSAGES } from '@/constants';
+import { connectDB } from '@lib/utils/database';
+import { Job } from '@schemas/Job';
+import { DatabaseData } from '@types';
+import { FE_ERROR_MESSAGES } from '@constants';
 import DatabaseClient from './DatabaseClient';
 
 async function getDatabaseData(searchParams: Record<string, string>): Promise<DatabaseData> {

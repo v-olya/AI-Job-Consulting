@@ -1,17 +1,17 @@
 import { chromium } from 'playwright';
 import * as cheerio from 'cheerio';
 import { Page } from 'playwright';
-import { IJob } from '@/schemas/Job';
-import { SCRAPING_THROTTLER, DETAIL_THROTTLER } from '@/lib/utils/throttlers';
-import { stripHtmlAndPreserveSpaces } from '@/lib/utils/textUtils';
-import { JobsCzConfig } from '@/types';
+import { IJob } from '@schemas/Job';
+import { SCRAPING_THROTTLER, DETAIL_THROTTLER } from '@lib/utils/throttlers';
+import { stripHtmlAndPreserveSpaces } from '@lib/utils/textUtils';
+import { JobsCzConfig } from '@types';
 import { 
   BROWSER_CONFIG, 
   TIMEOUT_CONFIG, 
   JOB_SOURCES, 
   DEFAULT_LOCATION 
-} from '@/constants';
-import { checkAbort } from '../utils/operationAbortRegistry';
+} from '@constants';
+import { checkAbort } from '@lib/utils/operationAbortRegistry';
 
 export async function scrapeJobsCz(
   config: JobsCzConfig,

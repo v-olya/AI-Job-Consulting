@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/utils/database';
-import { Job, IJob } from '@/schemas/Job';
-import { scrapeStartupJobs } from '@/lib/scrapers/startupjobs';
-import { scrapeJobsCz } from '@/lib/scrapers/jobscz';
-import { mockScrapeJobsCz } from '../../../../mocks/mockScrapers';
-import { isOllamaAvailable } from '@/lib/ai/ollama';
-import { processJobWithAI } from '@/lib/ai/jobProcessing';
+import { connectDB } from '@lib/utils/database';
+import { Job, IJob } from '@schemas/Job';
+import { scrapeStartupJobs } from '@lib/scrapers/startupjobs';
+import { scrapeJobsCz } from '@lib/scrapers/jobscz';
+import { mockScrapeJobsCz } from '@mocks/mockScrapers';
+import { isOllamaAvailable } from '@lib/ai/ollama';
+import { processJobWithAI } from '@lib/ai/jobProcessing';
 import { getScrapingConfig } from '@/configureFilters';
-import { FE_ERROR_MESSAGES } from '@/constants';
+import { FE_ERROR_MESSAGES } from '@constants';
 import { withRegisteredOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
 import { checkAbort } from '@/lib/utils/operationAbortRegistry';
 

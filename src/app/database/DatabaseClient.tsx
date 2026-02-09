@@ -2,13 +2,13 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useCallback } from 'react';
-import { DatabaseData } from '@/types';
-import { FE_ERROR_MESSAGES } from '@/constants';
-import { JobCard } from '@/components/JobCard';
-import { StatCard } from '@/components/StatCard';
-import { PaginationButton } from '@/components/buttons/PaginationButton';
-import { useAsyncOperationState } from '@/hooks/useAsyncOperationState';
-import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
+import { DatabaseData } from '@types';
+import { FE_ERROR_MESSAGES } from '@constants';
+import { JobCard } from '@components/JobCard';
+import { StatCard } from '@components/StatCard';
+import { PaginationButton } from '@components/buttons/PaginationButton';
+import { useAsyncOperationState } from '@hooks/useAsyncOperationState';
+import { useRefreshOnFocus } from '@hooks/useRefreshOnFocus';
 
 interface DatabaseClientProps {
   initialData: DatabaseData;

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/utils/database';
-import { Job } from '@/schemas/Job';
-import { processJobWithAI } from '@/lib/ai/jobProcessing';
-import { FE_ERROR_MESSAGES } from '@/constants';
+import { connectDB } from '@lib/utils/database';
+import { Job } from '@schemas/Job';
+import { processJobWithAI } from '@lib/ai/jobProcessing';
+import { FE_ERROR_MESSAGES } from '@constants';
 import { withRegisteredOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
 import { checkAbort } from '@/lib/utils/operationAbortRegistry';
 

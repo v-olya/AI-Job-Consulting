@@ -1,9 +1,9 @@
-import { IJob } from '@/schemas/Job';
-import { API_THROTTLER } from '@/lib/utils/throttlers';
-import { stripHtmlTags } from '@/lib/utils/textUtils';
-import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@/types';
-import { BROWSER_CONFIG, JOB_SOURCES } from '@/constants';
-import { checkAbort } from '../utils/operationAbortRegistry';
+import { IJob } from '@schemas/Job';
+import { API_THROTTLER } from '@lib/utils/throttlers';
+import { stripHtmlTags } from '@lib/utils/textUtils';
+import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@types';
+import { BROWSER_CONFIG, JOB_SOURCES } from '@constants';
+import { checkAbort } from '@lib/utils/operationAbortRegistry';
 
 export async function scrapeStartupJobs(
   config: StartupJobsConfig,

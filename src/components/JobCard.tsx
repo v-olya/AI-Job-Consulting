@@ -1,5 +1,5 @@
-import { JobData } from '@/types';
-import { formatDate } from '@/lib/utils/textUtils';
+import { JobData } from '@types';
+import { formatDate } from '@lib/utils/textUtils';
 import { SectionHeader } from './SectionHeader';
 import { InfoSection } from './InfoSection';
 

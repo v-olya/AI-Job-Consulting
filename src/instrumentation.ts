@@ -4,7 +4,7 @@ export async function register() {
     
     // We use a variable for the path to prevent the Next.js Edge bundler 
     // from statically analyzing and failing on Node-only dependencies.
-    const mockModule = '../mocks/node';
+    const mockModule = '@mocks/node';
     const { configureMSW } = await import(mockModule);
     configureMSW();
   }
