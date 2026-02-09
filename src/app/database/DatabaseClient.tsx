@@ -8,6 +8,7 @@ import { JobCard } from '@/components/JobCard';
 import { StatCard } from '@/components/StatCard';
 import { PaginationButton } from '@/components/buttons/PaginationButton';
 import { useAsyncOperationState } from '@/hooks/useAsyncOperationState';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 
 interface DatabaseClientProps {
   initialData: DatabaseData;
@@ -47,6 +48,10 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   } = useAsyncOperationState<ProcessingPayload>({ 
     operationType: 'ai-processing',
     onOperationComplete: handleOperationComplete
+  });
+  
+  useRefreshOnFocus(() => {
+    router.refresh();
   });
   
   const currentSource = searchParams.get('source') || '';

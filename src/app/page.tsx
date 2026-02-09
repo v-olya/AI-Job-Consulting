@@ -11,6 +11,7 @@ import { GradientButton } from '@/components/buttons/GradientButton';
 import { CancelButton } from '@/components/buttons/CancelButton';
 import { useJobCards } from '@/hooks/useJobCards';
 import { useAsyncOperationState } from '@/hooks/useAsyncOperationState';
+import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 
 export default function Home() {
   const router = useRouter();
@@ -27,6 +28,10 @@ export default function Home() {
     cancelOperation,
     activeOperation
   } = useAsyncOperationState({ operationType: 'scraping' });
+
+  useRefreshOnFocus(() => {
+    refetchTopJobs();
+  });
 
   useEffect(() => {
     setMounted(true);
