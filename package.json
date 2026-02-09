@@ -4,20 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:mock": "set MOCK_MODE=true&& next dev",
+    "dev:mock": "cross-env MOCK_MODE=true next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "type-check": "tsc --noEmit && knip",
     "preprocess": "tsx src/scripts/preprocess-startupjobs.ts",
-    "postinstall": "npx tsx src/scripts/setup.ts"
+    "postinstall": "node -r ts-node/register src/scripts/setup.ts"
   },
   "dependencies": {
     "@mswjs/interceptors": "^0.41.2",
     "cheerio": "^1.0.0",
     "mongoose": "^8.8.4",
     "next": "16.1.6",
+    "nodemailer": "^8.0.1",
     "ollama": "^0.6.3",
     "playwright": "^1.48.0",
     "postcss": "^8.4.32",
@@ -30,8 +31,10 @@
     "@tailwindcss/postcss": "^4",
     "@types/cheerio": "^0.22.35",
     "@types/node": "^20",
+    "@types/nodemailer": "^7.0.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -39,6 +42,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "knip": "^5.83.1",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
