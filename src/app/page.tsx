@@ -134,38 +134,37 @@ export default function Home() {
           </div>
         ) : (
           <div className="mb-8 flex flex-wrap gap-4">
-            {isOperationActive? (
-              <div className="mx-auto">
+            <GradientButton
+              onClick={() => handleScrape('startupjobs')}
+              variant="blue"
+              disabled={isOperationActive}
+            >
+              {isOperationActive && activeOperation?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
+            </GradientButton>
+            
+            <GradientButton
+              onClick={() => handleScrape('jobs.cz')}
+              variant="green"
+              disabled={isOperationActive}
+            >
+              {isOperationActive && activeOperation?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
+            </GradientButton>
+            
+            <GradientButton
+              onClick={() => handleScrape('all')}
+              variant="purple"
+              disabled={isOperationActive}
+            >
+              {isOperationActive && activeOperation?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
+            </GradientButton>
+
+            {isOperationActive && (
+              <div className="w-full flex justify-center mt-2">
                 <CancelButton onClick={handleCancel}/>
               </div>
-            ) : (
-              <>
-                <GradientButton
-                  onClick={() => handleScrape('startupjobs')}
-                  disabled={isOperationActive}
-                  variant="blue"
-                >
-                  {isOperationActive && activeOperation?.source === 'startupjobs' ? '⏳ Scraping...' : '🚀 Scrape StartupJobs'}
-                </GradientButton>
-                
-                <GradientButton
-                  onClick={() => handleScrape('jobs.cz')}
-                  disabled={isOperationActive}
-                  variant="green"
-                >
-                  {isOperationActive && activeOperation?.source === 'jobs.cz' ? '⏳ Scraping...' : '🔍 Scrape Jobs.cz'}
-                </GradientButton>
-                
-                <GradientButton
-                  onClick={() => handleScrape('all')}
-                  disabled={isOperationActive}
-                  variant="purple"
-                >
-                  {isOperationActive && activeOperation?.source === 'all' ? '⏳ Scraping...' : '⚡ Scrape All'}
-                </GradientButton>
-              </>
             )}
           </div>
+
         )}
 
         {lastScrapeResult && (
