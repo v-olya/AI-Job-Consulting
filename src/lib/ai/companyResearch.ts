@@ -2,6 +2,7 @@ import { OLLAMA_CONFIG, COMPANY_RESEARCH_PROMPTS } from '@/constants';
 import { CompanyInfoSchema, companyInfoJsonSchema, type CompanyInfo } from '@/schemas/CompanyInfo';
 import { createOllamaClient } from './ollama';
 import { checkAbort } from '../utils/operationAbortRegistry';
+import { parseJsonFromString } from '../utils/textUtils';
 
 export async function searchCompanyInfo(companyName: string, signal?: AbortSignal): Promise<CompanyInfo | null> {
   const ollama = createOllamaClient(signal);
@@ -48,10 +49,8 @@ export async function searchCompanyInfo(companyName: string, signal?: AbortSigna
       throw new Error('Empty response from LLM');
     }
 
-    const parsedData = JSON.parse(content);
-    const companyInfo = CompanyInfoSchema.parse(parsedData);
+    return parseJsonFromString(content, CompanyInfoSchema);
     
-    return companyInfo;
   } catch (error) {
     checkAbort(signal);
     

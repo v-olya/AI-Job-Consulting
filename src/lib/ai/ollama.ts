@@ -4,6 +4,7 @@ import { JobAnalysisSchema, jobAnalysisJsonSchema, type JobAnalysis } from '@/sc
 import { analyzeError } from '@/lib/utils/errorUtils';
 import { Throttler, delay } from '@/lib/utils/throttlers';
 import { checkAbort } from '../utils/operationAbortRegistry';
+import { parseJsonFromString } from '../utils/textUtils';
 
 const AI_THROTTLER = new Throttler(1000);
 
@@ -68,13 +69,13 @@ export async function analyzeJob(jobData: {
   title: string;
   company: string;
   description: string;
-  location: string;
+  location?: string;
   salary?: string;
 }, signal?: AbortSignal): Promise<JobAnalysis | undefined> {
   const ollama = createOllamaClient(signal);
   const jobOffer = `Název pozice: ${jobData.title}
 Společnost: ${jobData.company}
-Lokace: ${jobData.location}
+Lokace: ${jobData.location || 'Neuvedeno'}
 ${jobData.salary ? `Plat: ${jobData.salary}` : ''}
 
 Popis pozice:
@@ -108,12 +109,10 @@ ${jobData.description}`;
       if (!content) {
         throw new Error('Empty response from LLM');
       }
-
-      const parsedData = JSON.parse(content);
-      const analysis = JobAnalysisSchema.parse(parsedData);
+      const parsedData = parseJsonFromString(content, JobAnalysisSchema);
       
       console.log(`Successfully analyzed job on attempt ${attempt}`);
-      return analysis;
+      return parsedData;
       
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
