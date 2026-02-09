@@ -19,6 +19,7 @@ export function stripHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+
 export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('en-US');
 }

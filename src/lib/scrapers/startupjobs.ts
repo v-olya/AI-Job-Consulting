@@ -1,6 +1,6 @@
 import { IJob } from '@schemas/Job';
 import { API_THROTTLER } from '@lib/utils/throttlers';
-import { stripHtmlTags } from '@lib/utils/textUtils';
+import { stripHtmlTags, generateSlug } from '@lib/utils/textUtils';
 import { StartupJobsConfig, StartupJobsApiResponse, StartupJobsOffer } from '@types';
 import { BROWSER_CONFIG, JOB_SOURCES } from '@constants';
 import { checkAbort } from '@lib/utils/operationAbortRegistry';
@@ -98,14 +98,6 @@ export async function scrapeStartupJobs(
           break;
         }
 
-        const generateSlug = (title: string): string => {
-          return title
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-        };
         
         const jobs = responseData.map((job: StartupJobsOffer) => {
           const cleanDescription = stripHtmlTags(
@@ -136,7 +128,7 @@ export async function scrapeStartupJobs(
             tags: job.tags,
             postedDate: job.created_at ? new Date(job.created_at) : new Date(),
           };
-        });
+        }); 
         
         allJobs.push(...jobs);
         

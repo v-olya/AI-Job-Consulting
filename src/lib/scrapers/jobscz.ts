@@ -3,13 +3,12 @@ import * as cheerio from 'cheerio';
 import { Page } from 'playwright';
 import { IJob } from '@schemas/Job';
 import { SCRAPING_THROTTLER, DETAIL_THROTTLER } from '@lib/utils/throttlers';
-import { stripHtmlAndPreserveSpaces } from '@lib/utils/textUtils';
+import { stripHtmlAndPreserveSpaces, generateSlug } from '@lib/utils/textUtils';
 import { JobsCzConfig } from '@types';
 import { 
   BROWSER_CONFIG, 
   TIMEOUT_CONFIG, 
-  JOB_SOURCES, 
-  DEFAULT_LOCATION 
+  JOB_SOURCES
 } from '@constants';
 import { checkAbort } from '@lib/utils/operationAbortRegistry';
 
@@ -51,14 +50,14 @@ export async function scrapeJobsCz(
       
       if (config.locality) {
         if (config.locality.code) params.append('locality[code]', config.locality.code);
-        if (config.locality.label) params.append('locality[label]', config.locality.label);
         if (config.locality.coords) params.append('locality[coords]', config.locality.coords);
         if (config.locality.radius) params.append('locality[radius]', config.locality.radius.toString());
       }
       
       params.append('page', currentPage.toString());
       
-      const url = `https://www.jobs.cz/prace/praha/?${params.toString()}`;
+      const locationSlug = config.locality?.label ? generateSlug(config.locality.label) : 'praha';
+      const url = `https://www.jobs.cz/prace/${locationSlug}/?${params.toString()}`;
       
       try {
         await page.goto(url, { 
@@ -180,7 +179,7 @@ async function scrapeJobDetail(
         '[class*="location"]'
       ];
       
-      let location = DEFAULT_LOCATION;
+      let location = undefined;
       for (const selector of locationSelectors) {
         const loc = $(selector)?.first().text().trim();
         if (loc) {
