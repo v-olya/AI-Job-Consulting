@@ -10,7 +10,7 @@ interface JobProcessingInput {
   title: string;
   company: string;
   description: string;
-  location: string;
+  location?: string;
   salary?: string;
 }
 
@@ -68,7 +68,7 @@ export async function processJobWithAI(
               text: `AI recommends applying for this job!\n\n` +
                     `Role: ${jobData.title}\n` +
                     `Company: ${result.updatedCompanyName || jobData.company}\n` +
-                    `Location: ${jobData.location}\n` +
+                    `Location: ${jobData.location || 'N/A'}\n` +
                     `Salary: ${jobData.salary || 'N/A'}\n\n` +
                     `AI Analysis: ${validatedAnalysis.body.analysis || 'No analysis provided.'}`,
               html: `
@@ -86,7 +86,7 @@ export async function processJobWithAI(
                     </tr>
                     <tr>
                       <td style="padding: 8px; font-weight: bold;">Location:</td>
-                      <td style="padding: 8px;">${jobData.location}</td>
+                      <td style="padding: 8px;">${jobData.location || 'N/A'}</td>
                     </tr>
                     <tr>
                       <td style="padding: 8px; font-weight: bold;">Salary:</td>

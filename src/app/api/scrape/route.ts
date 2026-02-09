@@ -38,7 +38,7 @@ async function processAndSaveJob(
     
     let processingResult;
     
-    if (ollamaAvailable && jobData.title && jobData.company && jobData.description && jobData.location) {
+    if (ollamaAvailable && jobData.title && jobData.company && jobData.description) {
       processingResult = await processJobWithAI({
         title: jobData.title,
         company: jobData.company,
@@ -109,51 +109,46 @@ export async function POST(request: Request) {
           console.log(FE_ERROR_MESSAGES.OLLAMA_NOT_AVAILABLE);
         }
 
-        if (source === 'startupjobs' || source === 'all') {
-          console.log('Scraping StartupJobs...');
-          const startupJobsConfig = config?.startupJobs || scrapingConfig.startupJobs;
-          const startupJobs = await scrapeStartupJobs(
-            startupJobsConfig,
-            async (jobData) => {
+        type ScraperFunction = (
+          config: unknown,
+          onJobScraped?: (job: Partial<IJob>) => Promise<void>,
+          signal?: AbortSignal
+        ) => Promise<Partial<IJob>[]>;
+
+        const sources = [
+          {
+            key: 'startupjobs',
+            name: 'StartupJobs',
+            config: (config?.startupJobs || scrapingConfig.startupJobs) as unknown,
+            scraper: scrapeStartupJobs as unknown as ScraperFunction,
+          },
+          {
+            key: 'jobs.cz',
+            name: 'Jobs.cz',
+            config: (config?.jobsCz || scrapingConfig.jobsCz) as unknown,
+            scraper: (process.env.MOCK_MODE === 'true' ? mockScrapeJobsCz : scrapeJobsCz) as unknown as ScraperFunction,
+            isMock: process.env.MOCK_MODE === 'true',
+          },
+        ];
+
+        for (const s of sources) {
+          if (source !== 'all' && source !== s.key) continue;
+          
+          checkAbort(signal);
+          console.log(`Scraping ${s.name}...`);
+          if (s.isMock) console.log(`Using MOCK scraper for ${s.name}`);
+          
+          await s.scraper(
+            s.config,
+            async (jobData: Partial<IJob>) => {
               checkAbort(signal);
-              if (signal.aborted) {
-                throw new Error('Operation cancelled');
-              }
-              console.log(`${jobData.title}`);
               allScrapedJobs.push(jobData);
               await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs, signal);
             },
             signal
           );
-          console.log(`StartupJobs scraping complete: ${startupJobs.length} jobs, ${savedJobs.length} saved`);
-        }
-
-        if (signal.aborted) {
-          throw new Error('Operation cancelled');
-        }
-
-        if (source === 'jobs.cz' || source === 'all') {
-          console.log('Scraping Jobs.cz...');
-          const jobsCzConfig = config?.jobsCz || scrapingConfig.jobsCz;
-          const scraper = process.env.MOCK_MODE === 'true' ? mockScrapeJobsCz : scrapeJobsCz;
           
-          if (process.env.MOCK_MODE === 'true') {
-            console.log('Using MOCK scraper for Jobs.cz');
-          }
-          
-          const jobsCzJobs = await scraper(
-            jobsCzConfig,
-            async (jobData) => {
-              checkAbort(signal);
-              if (signal.aborted) {
-                throw new Error('Operation cancelled');
-              }
-              allScrapedJobs.push(jobData);
-              await processAndSaveJob(jobData, ollamaAvailable, savedJobs, skippedJobs, signal);
-            },
-            signal
-          );
-          console.log(`Jobs.cz scraping complete: ${jobsCzJobs.length} jobs, ${savedJobs.length} saved`);
+          console.log(`${s.name} scraping complete: ${allScrapedJobs.length} total jobs collected, ${savedJobs.length} saved`);
         }
 
         if (!allScrapedJobs.length) {

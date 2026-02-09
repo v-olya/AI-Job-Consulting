@@ -54,8 +54,6 @@ export const JOB_SOURCES = {
   JOBS_CZ: 'jobs.cz',
 } as const;
 
-export const DEFAULT_LOCATION = 'Not specified';
-
 export const HTML_ENTITIES = {
   '&nbsp;': ' ',
   '&amp;': '&',
