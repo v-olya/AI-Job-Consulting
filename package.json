@@ -14,6 +14,7 @@
     "postinstall": "npx tsx src/scripts/setup.ts"
   },
   "dependencies": {
+    "@mswjs/interceptors": "^0.41.2",
     "cheerio": "^1.0.0",
     "mongoose": "^8.8.4",
     "next": "16.1.6",
@@ -37,7 +38,6 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "knip": "^5.83.1",
-    "msw": "^2.12.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
