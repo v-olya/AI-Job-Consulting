@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     const operation = await withRegisteredOperation(
       {
         type: AI_PROCESSING_OPERATION_TYPE,
+        source: 'unprocessed',
         timeoutMs: maxProcessingTimeMs,
         onTimeout: () => {
           console.log(`AI processing timeout reached (${maxProcessingTimeMs}ms), aborting...`);

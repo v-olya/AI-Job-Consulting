@@ -90,6 +90,7 @@ export async function POST(request: Request) {
     const operation = await withRegisteredOperation(
       {
         type: SCRAPING_OPERATION_TYPE,
+        source,
         timeoutMs: maxScrapingTimeMs,
         onTimeout: () => {
           console.log(`Scraping timeout reached (${maxScrapingTimeMs}ms), aborting...`);

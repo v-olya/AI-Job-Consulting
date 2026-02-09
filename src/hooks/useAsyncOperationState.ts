@@ -9,7 +9,7 @@ interface ActiveOperation {
   source?: string;
 }
 
-  interface BroadcastMessage<T = unknown> {
+interface BroadcastMessage<T = unknown> {
   type: 'START' | 'STOP';
   operationType: OperationType;
   source?: string;
@@ -25,7 +25,8 @@ export function useAsyncOperationState<T = unknown>(options: {
   const isOperationActive = activeOperation !== null;
 
   useEffect(() => {
-    if (!isBrowser) return;
+    const currentChannel = channel;
+    if (!isBrowser || !currentChannel) return;
 
     const handleMessage = (event: MessageEvent<BroadcastMessage<T>>) => {
       const { type, operationType: msgOperationType, source, payload } = event.data;
@@ -43,18 +44,28 @@ export function useAsyncOperationState<T = unknown>(options: {
       }
     };
 
-    channel.addEventListener('message', handleMessage);
+    currentChannel.addEventListener('message', handleMessage);
 
-    // Query server for operation state on mount
+    // Initial check on mount
     const checkServerState = async () => {
       try {
-        const response = await fetch(`/api/operation-status?type=${operationType}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+        const response = await fetch(`/api/operation-status?type=${operationType}&t=${Date.now()}`, {
+          cache: 'no-store'
         });
         const result = await response.json();
-        if (result.success && result.isActive) {
-          setActiveOperation({ type: operationType });
+        
+        if (result.success) {
+          if (result.isActive) {
+            setActiveOperation(prev => {
+              if (prev?.source === result.source) return prev;
+              return { 
+                type: operationType, 
+                source: result.source || undefined 
+              };
+            });
+          } else {
+            setActiveOperation(null);
+          }
         }
       } catch (error) {
         console.error('Failed to check server operation state:', error);
@@ -64,25 +75,17 @@ export function useAsyncOperationState<T = unknown>(options: {
     checkServerState();
 
     return () => {
-      channel.removeEventListener('message', handleMessage);
+      currentChannel.removeEventListener('message', handleMessage);
     };
   }, [operationType, onOperationComplete]);
 
-  // Check server before committing to local state to prevent race conditions
   const startOperation = useCallback((source?: string): boolean => {
-    if (isOperationActive) {
-      return false;
-    }
-    // Optimistically set local state and broadcast
-    // If server rejects (409), a caller calls stopOperation() from .tsx
+    if (isOperationActive) return false;
+    
     setActiveOperation({ type: operationType, source });
 
-    try {
-      if (isBrowser) {
-        channel.postMessage({ type: 'START', operationType, source });
-      }
-    } catch (error) {
-      console.error('Failed to broadcast start operation:', error);
+    if (isBrowser && channel) {
+      channel.postMessage({ type: 'START', operationType, source });
     }
 
     return true;
@@ -91,17 +94,13 @@ export function useAsyncOperationState<T = unknown>(options: {
   const stopOperation = useCallback((payload?: T): void => {
     setActiveOperation(null);
 
-    // Update the initiating tab since BroadcastChannel doesn't send messages to self
+    // Initiator syncs locally
     if (payload && onOperationComplete) {
       onOperationComplete(payload);
     }
 
-    try {
-      if (isBrowser) {
-        channel.postMessage({ type: 'STOP', operationType, payload });
-      }
-    } catch (error) {
-      console.error('Failed to broadcast stop operation:', error);
+    if (isBrowser && channel) {
+      channel.postMessage({ type: 'STOP', operationType, payload });
     }
   }, [operationType, onOperationComplete]);
 
@@ -127,3 +126,6 @@ export function useAsyncOperationState<T = unknown>(options: {
     cancelOperation
   };
 }
+
+
+

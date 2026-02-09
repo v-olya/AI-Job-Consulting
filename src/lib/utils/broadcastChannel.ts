@@ -1,3 +1,4 @@
 const CHANNEL_NAME = 'job-operations-sync';
 
-export const channel = new BroadcastChannel(CHANNEL_NAME);
+// Singleton instance per tab
+export const channel = typeof window !== 'undefined' ? new BroadcastChannel(CHANNEL_NAME) : null;

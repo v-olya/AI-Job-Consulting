@@ -3,6 +3,7 @@ export type OperationType = 'scraping' | 'ai-processing';
 interface OperationEntry {
   controller: AbortController;
   cleanup: () => void;
+  source?: string;
 }
 
 const activeControllers = new Map<OperationType, OperationEntry>();
@@ -21,6 +22,7 @@ interface RejectedOperation {
 export async function withRegisteredOperation<T>(
   options: {
     type: OperationType;
+    source?: string;
     timeoutMs: number;
     onTimeout?: () => void;
   },
@@ -41,10 +43,11 @@ export async function withRegisteredOperation<T>(
 
 function registerOperation(options: {
   type: OperationType;
+  source?: string;
   timeoutMs: number;
   onTimeout?: () => void;
 }): RegisteredOperation | RejectedOperation {
-  const { type, timeoutMs, onTimeout } = options;
+  const { type, source, timeoutMs, onTimeout } = options;
 
   if (activeControllers.has(type)) {
     return { ok: false };
@@ -68,7 +71,7 @@ function registerOperation(options: {
     cleanup();
   }, timeoutMs);
 
-  activeControllers.set(type, { controller, cleanup });
+  activeControllers.set(type, { controller, cleanup, source });
 
   return {
     ok: true,
@@ -87,10 +90,14 @@ export function abortOperation(type: OperationType): boolean {
   return true;
 }
 
-export function hasActiveOperation(type: OperationType): boolean {
-  return activeControllers.has(type);
+export function getActiveOperationInfo(type: OperationType) {
+  const entry = activeControllers.get(type);
+  if (!entry) return null;
+  return {
+    isActive: true,
+    source: entry.source
+  };
 }
-
 
 export function checkAbort(signal?: AbortSignal): void {
   if (signal?.aborted) {

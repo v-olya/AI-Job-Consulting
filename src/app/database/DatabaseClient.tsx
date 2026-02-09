@@ -79,7 +79,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
 
   const handleProcessWithAI = async () => {
 
-    const started = startOperation('database');
+    const started = startOperation('unprocessed');
     if (!started) {
       setProcessingResult(`${FE_ERROR_MESSAGES.AI_START_FAILED}.`);
       return;

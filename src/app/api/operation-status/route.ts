@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hasActiveOperation, type OperationType } from '@/lib/utils/operationAbortRegistry';
+import { getActiveOperationInfo, type OperationType } from '@/lib/utils/operationAbortRegistry';
 
 export async function GET(request: Request) {
   try {
@@ -13,12 +13,13 @@ export async function GET(request: Request) {
       );
     }
 
-    const isActive = hasActiveOperation(type);
+    const info = getActiveOperationInfo(type);
 
     return NextResponse.json({
       success: true,
       operationType: type,
-      isActive
+      isActive: !!info,
+      source: info?.source
     });
   } catch (error) {
     console.error('Error checking operation status:', error);
@@ -28,3 +29,4 @@ export async function GET(request: Request) {
     );
   }
 }
+
