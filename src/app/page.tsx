@@ -130,7 +130,9 @@ export default function Home() {
         ) : (
           <div className="mb-8 flex flex-wrap gap-4">
             {isOperationActive? (
-              <CancelButton onClick={handleCancel} />
+              <div className="mx-auto">
+                <CancelButton onClick={handleCancel}/>
+              </div>
             ) : (
               <>
                 <GradientButton
