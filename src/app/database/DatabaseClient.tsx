@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { DatabaseData } from '@/types';
 import { FE_ERROR_MESSAGES } from '@/constants';
 import { JobCard } from '@/components/JobCard';
@@ -13,18 +13,41 @@ interface DatabaseClientProps {
   initialData: DatabaseData;
 }
 
+interface ProcessingPayload {
+  processed: number;
+  isCancelled?: boolean;
+}
+
 export default function DatabaseClient({ initialData }: DatabaseClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [processingResult, setProcessingResult] = useState<string>();
   const [unprocessed, setUnprocessed] = useState<number>(initialData.statistics.unprocessed);
-  
+  const [prevPropsUnprocessed, setPrevPropsUnprocessed] = useState<number>(initialData.statistics.unprocessed);
+
+  // Sync local state when props change (server-side data refresh)
+  if (initialData.statistics.unprocessed !== prevPropsUnprocessed) {
+    setPrevPropsUnprocessed(initialData.statistics.unprocessed);
+    setUnprocessed(initialData.statistics.unprocessed);
+  }
+
+  const handleOperationComplete = useCallback((payload: ProcessingPayload) => {
+    // Sync state from other tabs' results or local completion
+    if (payload?.processed !== undefined) {
+      setUnprocessed(prev => Math.max(0, prev - payload.processed));
+      router.refresh(); // Sync Job list
+    }
+  }, [router]);
+
   const {
     isOperationActive,
     startOperation,
     stopOperation,
     cancelOperation
-  } = useAsyncOperationState({ operationType: 'ai-processing' });
+  } = useAsyncOperationState<ProcessingPayload>({ 
+    operationType: 'ai-processing',
+    onOperationComplete: handleOperationComplete
+  });
   
   const currentSource = searchParams.get('source') || '';
   const currentProcessed = searchParams.get('processed') || '';
@@ -70,30 +93,30 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         }),
       });
       
-      // Handle race condition: server rejected because operation already running
+      // Handle race condition: server rejects if operation already running
       if (response.status === 409) {
-        stopOperation(); // Revert optimistic local state
+        stopOperation(); // Revert optimistic state
         setProcessingResult(`${FE_ERROR_MESSAGES.AI_START_FAILED}. Operation already running.`);
         return;
       }
       
       const result = await response.json();
       
+      let resultPayload: ProcessingPayload | undefined = undefined;
+
       if (result.success) {
-        router.refresh();
         setProcessingResult(result.message);
+        resultPayload = { processed: result.processed || 0 };
       } else if (result.cancelled) {
         setProcessingResult(`${FE_ERROR_MESSAGES.AI_PROCESSING_CANCELLED}. ${result.processed || 0} jobs processed before cancellation.`);
-        if (!isNaN(+result.processed)) {
-          setUnprocessed((prev)=> prev - (+result.processed));
-        }
+        resultPayload = { processed: +result.processed || 0, isCancelled: true };
       } else {
         setProcessingResult(`Error: ${result.error}`);
       }
+      stopOperation(resultPayload);
     } catch (error) {
       console.error('AI processing error:', error);
       setProcessingResult(FE_ERROR_MESSAGES.AI_PROCESSING_ERROR);
-    } finally {
       stopOperation();
     }
   };
@@ -108,7 +131,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <StatCard title="Total Jobs" value={initialData.statistics.total || 0} bgColor="bg-blue-100" />
           <StatCard title="Processed" value={(initialData.statistics.processed) || 0} bgColor="bg-green-100" />
-          <StatCard title="Unprocessed" value={initialData.statistics.unprocessed || 0} bgColor="bg-orange-100" />
+          <StatCard title="Unprocessed" value={unprocessed || 0} bgColor="bg-orange-100" />
           <StatCard 
             title="Avg AI Score" 
             value={initialData.statistics.avgScore?.toFixed(1) || 'N/A'} 
@@ -133,10 +156,10 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
               <div>
                 <h3 className="font-bold text-yellow-900 text-lg flex items-center gap-2">
                   <span>⚠️</span>
-                  {unprocessed} jobs in total need AI processing
+                  {unprocessed} job offers in total need processing
                 </h3>
                 <p className="text-yellow-800 text-sm mt-1">
-                  Run AI analysis on unprocessed jobs to get summaries, skills, and scores
+                  Run AI analysis to get job scores and recommendations
                 </p>
               </div>
               <div className="flex gap-3">
@@ -170,7 +193,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
             name="sourceSelect"
             value={currentSource} 
             onChange={(e) => updateFilters({ source: e.target.value })}
-            className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+            className="font-bold border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
           >
             <option value="">All Sources</option>
             <option value="startupjobs">StartupJobs</option>
@@ -183,7 +206,7 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
             onChange={(e) => updateFilters({ processed: e.target.value })}
             className="border border-gray-300 rounded-lg px-4 py-2 bg-white shadow-sm hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
           >
-            <option value="">All Status</option>
+            <option value="">By Status</option>
             <option value="true">Processed</option>
             <option value="false">Unprocessed</option>
           </select>
