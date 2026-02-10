@@ -126,7 +126,7 @@ When AI processes jobs, it automatically sends email notifications for positions
 | `POST /api/process-ai` | POST | AI-process unprocessed jobs. Body: `{ limit?: number }` |
 | `GET /api/jobs` | GET | List jobs with filters: `?source=\u0026processed=\u0026limit=\u0026skip=` |
 | `GET /api/config` | GET | Current scraping configuration with field descriptions |
-| `GET /api/operation-status` | GET | Check if operation is running. Query: `?type=scraping\|ai-processing` |
+| `GET /api/operation-status?type=scraping\|ai-processing` | GET | Check if operation is running (Orphaned - not used by main app) |
 | `POST /api/cancel` | POST | Cancel running operation. Body: `{ type?: 'scraping' \| 'ai-processing' }` |
 
 All long-running endpoints support cancellation via `AbortSignal` and return stats on completion/cancellation.
@@ -140,10 +140,13 @@ The application synchronizes operation state across multiple browser tabs using 
 - **Two operation types**: `scraping` (home page) and `ai-processing` (database page)
 - **Server-side registry**: `operationAbortRegistry.ts` tracks active AbortControllers per operation type
 - **Client-side sync**: `useAsyncOperationState` hook manages local state + cross-tab broadcasting
+- **Server hydration**: Server components (like Database) pre-fetch operation status to avoid client-side mount delays
 
 ### Flow
 
-1. **On mount**: Tab queries `/api/operation-status?type=X` to check if operation is already running. Syncs local state accordingly.
+1. **On mount/load**: 
+   - **Server components**: Query `getActiveOperationInfo` and pass the state as a prop to the client. This ensures the UI (like Cancel buttons) shows up immediately.
+   - Syncs local state accordingly.
 
 2. **Starting an operation**:
    - Tab sets local state optimistically (sync, no server check)
@@ -165,13 +168,28 @@ The application synchronizes operation state across multiple browser tabs using 
 
 If mother tab closes before operation completes: other tabs show "Processing..." until page refresh. Reload triggers mount-time server query → gets fresh state.
 
-**⚠️ Single-Server-Instance Limitation**:
+**⚠️ Single-Server-Instance Limitation**
 
 - This app cannot be deployed as a multi-tenant SaaS.
-- Cancellation only works within the same server instance (AbortControllers are stored in a module-level Map). In serverless or multi-instance deployments, `/api/cancel` may hit a different instance than the running operation.
+- Cancellation only works within the same server instance. In serverless or multi-instance deployments, `/api/cancel` may hit a different instance than the running operation.
 
-**⚠️ One-User Limitation** The application:
+**⚠️ One-User Limitation** 
+
+The application:
 
 - Does not manage user authentication or multiple user accounts
 - Stores all data in a single MongoDB database without user isolation
 - Shares the same AI context and configuration across all sessions.
+
+### Screenshots
+
+Homepage header:
+
+<img src="https://github.com/user-attachments/assets/c979a065-7272-4e3b-8523-683c35db1289" />
+
+ Database page header:
+
+ <img src="https://github.com/user-attachments/assets/46f21d81-8247-496d-9287-d52cd1293d0e" />
+
+
+
