@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DatabaseData } from '@types';
 import { FE_ERROR_MESSAGES } from '@constants';
 import { JobCard } from '@components/JobCard';
@@ -125,6 +125,15 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
       stopOperation();
     }
   };
+
+  useEffect(() => {
+    if (processingResult) {
+      const timer = setTimeout(() => {
+        setProcessingResult(undefined);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [processingResult]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
