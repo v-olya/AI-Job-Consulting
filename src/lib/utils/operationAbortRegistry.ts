@@ -6,7 +6,21 @@ interface OperationEntry {
   source?: string;
 }
 
-const activeControllers = new Map<OperationType, OperationEntry>();
+const GLOBAL_REGISTRY_KEY = Symbol.for('job-assistant.operation-registry');
+
+interface OperationRegistry {
+  activeControllers: Map<OperationType, OperationEntry>;
+}
+
+const globalRegistry = (globalThis as unknown as { [GLOBAL_REGISTRY_KEY]: OperationRegistry });
+
+if (!globalRegistry[GLOBAL_REGISTRY_KEY]) {
+  globalRegistry[GLOBAL_REGISTRY_KEY] = {
+    activeControllers: new Map<OperationType, OperationEntry>()
+  };
+}
+
+const { activeControllers } = globalRegistry[GLOBAL_REGISTRY_KEY];
 
 interface RegisteredOperation {
   ok: true;
