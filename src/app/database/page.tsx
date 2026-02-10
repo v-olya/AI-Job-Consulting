@@ -4,6 +4,7 @@ import { Job } from '@schemas/Job';
 import { DatabaseData } from '@types';
 import { FE_ERROR_MESSAGES } from '@constants';
 import DatabaseClient from './DatabaseClient';
+import { getActiveOperationInfo } from '@/lib/utils/operationAbortRegistry';
 
 async function getDatabaseData(searchParams: Record<string, string>): Promise<DatabaseData> {
   await connectDB();
@@ -100,9 +101,18 @@ export default async function DatabaseViewer({
     );
   }
 
+  const activeOpInfo = getActiveOperationInfo('ai-processing');
+  const initialActiveOperation = activeOpInfo ? { 
+    type: 'ai-processing' as const, 
+    source: activeOpInfo.source 
+  } : null;
+
   return (
     <Suspense fallback={<div className="p-8">Loading...</div>}>
-      <DatabaseClient initialData={data} />
+      <DatabaseClient 
+        initialData={data} 
+        initialActiveOperation={initialActiveOperation}
+      />
     </Suspense>
   );
 }

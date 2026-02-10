@@ -9,9 +9,11 @@ import { StatCard } from '@components/StatCard';
 import { PaginationButton } from '@components/buttons/PaginationButton';
 import { useAsyncOperationState } from '@hooks/useAsyncOperationState';
 import { useRefreshOnFocus } from '@hooks/useRefreshOnFocus';
+import { OperationType } from '@/lib/utils/operationAbortRegistry';
 
 interface DatabaseClientProps {
   initialData: DatabaseData;
+  initialActiveOperation?: { type: OperationType; source?: string } | null;
 }
 
 interface ProcessingPayload {
@@ -19,7 +21,7 @@ interface ProcessingPayload {
   isCancelled?: boolean;
 }
 
-export default function DatabaseClient({ initialData }: DatabaseClientProps) {
+export default function DatabaseClient({ initialData, initialActiveOperation }: DatabaseClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [processingResult, setProcessingResult] = useState<string>();
@@ -47,7 +49,8 @@ export default function DatabaseClient({ initialData }: DatabaseClientProps) {
     cancelOperation
   } = useAsyncOperationState<ProcessingPayload>({ 
     operationType: 'ai-processing',
-    onOperationComplete: handleOperationComplete
+    onOperationComplete: handleOperationComplete,
+    initialActiveOperation
   });
   
   useRefreshOnFocus(() => {

@@ -19,9 +19,10 @@ interface BroadcastMessage<T = unknown> {
 export function useAsyncOperationState<T = unknown>(options: {
   operationType: OperationType;
   onOperationComplete?: (payload: T) => void;
+  initialActiveOperation?: ActiveOperation | null;
 }) {
-  const { operationType, onOperationComplete } = options;
-  const [activeOperation, setActiveOperation] = useState<ActiveOperation | null>(null);
+  const { operationType, onOperationComplete, initialActiveOperation } = options;
+  const [activeOperation, setActiveOperation] = useState<ActiveOperation | null>(initialActiveOperation || null);
   const isOperationActive = activeOperation !== null;
 
   useEffect(() => {
@@ -45,34 +46,6 @@ export function useAsyncOperationState<T = unknown>(options: {
     };
 
     currentChannel.addEventListener('message', handleMessage);
-
-    // Initial check on mount
-    const checkServerState = async () => {
-      try {
-        const response = await fetch(`/api/operation-status?type=${operationType}&t=${Date.now()}`, {
-          cache: 'no-store'
-        });
-        const result = await response.json();
-        
-        if (result.success) {
-          if (result.isActive) {
-            setActiveOperation(prev => {
-              if (prev?.source === result.source) return prev;
-              return { 
-                type: operationType, 
-                source: result.source || undefined 
-              };
-            });
-          } else {
-            setActiveOperation(null);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check server operation state:', error);
-      }
-    };
-
-    checkServerState();
 
     return () => {
       currentChannel.removeEventListener('message', handleMessage);
